@@ -12,6 +12,54 @@
 #define BACKLOG 20   /* Number of allowed connections */
 #define BUFF_SIZE 1024
 
+int parseMess(char *str, int *opcode, int *length, char *payload) {
+    char temp_str[BUFF_SIZE];
+    memcpy(temp_str, str, 1);
+    temp_str[1] = '\0';
+    *opcode = atoi(temp_str);
+
+    memcpy(temp_str, str+1, 2);
+    temp_str[2] = '\0';
+    *length = atoi(temp_str);
+
+    memcpy(temp_str, str+3, strlen(str) - 3);
+    temp_str[strlen(str)-3] = '\0';
+    strcpy(payload, temp_str);
+
+    return 0;
+}
+
+// Processing the received message(str) and save to file
+// Return opcode_type and key
+int processData(char *str, char *ipv4Client)
+{
+    char payload[BUFF_SIZE];
+    int opcode;
+    int length;
+    FILE *fp;
+    parseMess(str, &opcode, &length, payload);
+
+    switch(opcode) {
+        case 0: // Save client's infomation
+            if (length > 0) {
+				char path[BUFF_SIZE] = "";
+				strcat(path, "hardware-info/");
+				strcat(path, ipv4Client);
+				strcat(path, ".txt");
+				if ((fp = fopen(path, "a")) == NULL) {
+					printf("Can't save file client's infomation.\n");
+					return 2;
+				}
+                fputs(payload, fp);
+                fclose(fp);
+            } else {
+                return 1;
+            }
+            break;
+    }
+    return 0;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -28,7 +76,6 @@ int main(int argc, char *argv[])
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
 	int port = atoi(argv[1]);
-
 	//Step 1: Construct a TCP socket to listen connection request
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1 ){  /* calls socket() */
 		perror("\nError: ");
@@ -107,13 +154,22 @@ int main(int argc, char *argv[])
 					client[i] = -1;
 				} else {
 					rcvBuff[ret] = '\0';
-					strcpy(sendBuff, rcvBuff);
-					ret = send(sockfd, sendBuff, strlen(sendBuff), 0);
-					if (ret <= 0){
-						FD_CLR(sockfd, &allset);
-						close(sockfd);
-						client[i] = -1;
+					int opcode, length;
+					char payload[BUFF_SIZE];
+					// parseMess(rcvBuff, &opcode, &length, payload);
+
+					if (processData(rcvBuff, inet_ntoa(cliaddr.sin_addr)) == 1) {
+						printf("Receiving client's infomation is successed.\n");
 					}
+					
+					// printf("%d\n", ret);
+					// strcpy(sendBuff, rcvBuff);
+					// ret = send(sockfd, sendBuff, strlen(sendBuff), 0);
+					// if (ret <= 0){
+					// 	FD_CLR(sockfd, &allset);
+					// 	close(sockfd);
+					// 	client[i] = -1;
+					// }
 				}
 			}
 

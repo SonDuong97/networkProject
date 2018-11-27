@@ -11,6 +11,30 @@
 
 #define BUFF_SIZE 1024
 
+// Make message from opcode, length, payload to send to server
+char *makeMessage(int opcode, int lenght, char* payload)
+{
+    char* message = malloc(BUFF_SIZE+4);
+    bzero(message, BUFF_SIZE+3);
+    sprintf(message, "%d%02d%s", opcode, lenght, payload);
+    return message; 
+}
+
+int getOutput(char *command, char *output_str) {
+	FILE *fp = popen(command, "r");
+	char buff[BUFF_SIZE];
+	if (fp == NULL) {
+		return 1;
+	}
+
+	while (!feof(fp)) {
+		fgets(buff, BUFF_SIZE, fp);
+		strcat(output_str, buff);
+	}
+	
+	return 0;
+}
+
 int main(int argc, char *argv[]){
 	if (argc <= 2) {
 		printf("The argument is error.\n");
@@ -21,7 +45,7 @@ int main(int argc, char *argv[]){
 	int server_port = atoi(argv[2]);
 	int client_sock;
 	struct sockaddr_in server_addr; /* server's address information */
-	int msg_len, bytes_sent, bytes_received;
+	int msg_len, bytes_sent, bytes_received, i;
 	char sendBuff[BUFF_SIZE], rcvBuff[BUFF_SIZE];
 
 	//Step 1: Construct socket
@@ -39,29 +63,62 @@ int main(int argc, char *argv[]){
 	}
 	
 	while (1) {
-		printf("Enter the string: \n");
-		fflush(stdin);
-		fgets(sendBuff, BUFF_SIZE, stdin);
-		msg_len = strlen(sendBuff) - 1;
-		printf("%d\n", msg_len);
-		// Sent the name of the file
-		bytes_sent = send(client_sock, sendBuff, msg_len, 0);
-		if(bytes_sent <= 0){
-			printf("Error: Connection closed.\n");
-			break;
-		}
+		char data[BUFF_SIZE] = "";
+		if (getOutput("lscpu", data) == 1) {
+			printf("Error.\n");
+		} else {
+			msg_len = strlen(data);
+			i = 0;
+			//Sent client's infomation
+			while(1) {
+				char temp[100];
+				char *mess;
+				if (msg_len >= 99) {
+					memcpy(temp, data + i, 99);
+					temp[99] = '\0';
+					mess = makeMessage(0, 99, temp);
+				} else {
+					memcpy(temp, data + i, msg_len);
+					temp[msg_len] = '\0';
+					mess = makeMessage(0, msg_len, temp);
+				}
 
-		// Receive responsing message from server
-		bytes_received = recv(client_sock, rcvBuff, BUFF_SIZE, 0);
-		if (bytes_received <= 0){
-			printf("Error: Connection closed.\n");
-			break;
+				// Sent message with opcode = 0: Send all infomation of client's computer
+				bytes_sent = send(client_sock, mess, strlen(mess), 0);
+				if(bytes_sent <= 0){
+					printf("Error: Connection closed.\n");
+					break;
+				}
+
+				i += 99;
+				msg_len -= 99;
+				if (msg_len <= 0) {
+					mess = makeMessage(0, 0, "");
+					// Sent message with opcode = 0: Send all infomation of client's computer
+					bytes_sent = send(client_sock, mess, strlen(mess), 0);
+					if(bytes_sent <= 0){
+						printf("Error: Connection closed.\n");
+						break;
+					}
+					break;
+				}
+			}
+			
+			printf("Delay:\n");
+			fgets(sendBuff, 100, stdin);
 		}
-		rcvBuff[bytes_received] = '\0';
-		printf("Reply from server: %s %lu\n", rcvBuff, strlen(rcvBuff));
+		
+		// Receive responsing message from server
+		// bytes_received = recv(client_sock, rcvBuff, BUFF_SIZE, 0);
+		// if (bytes_received <= 0){
+		// 	printf("Error: Connection closed.\n");
+		// 	break;
+		// }
+		// rcvBuff[bytes_received] = '\0';
+		// printf("Reply from server: %s %lu\n", rcvBuff, strlen(rcvBuff));
 		
 
-		printf("----------------------------------------------------\n");
+		// printf("----------------------------------------------------\n");
 	}
 	
 	
