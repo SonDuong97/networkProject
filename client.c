@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <libgen.h>
 
-#define BUFF_SIZE 1024
+#define BUFF_SIZE 8192
 
 // Make message from opcode, length, payload to send to server
 char *makeMessage(int opcode, int lenght, char* payload)
@@ -44,11 +44,11 @@ int main(int argc, char *argv[]){
 	char server_address[100] = "";
 	strcpy(server_address, argv[1]);
 	int server_port = atoi(argv[2]);
-	int client_sock;
+	int client_sock, i;
+	char buff[BUFF_SIZE];
 	struct sockaddr_in server_addr; /* server's address information */
-	int msg_len, bytes_sent, bytes_received, i;
-	char sendBuff[BUFF_SIZE], rcvBuff[BUFF_SIZE];
-
+	int msg_len, bytes_sent, bytes_received;
+	
 	//Step 1: Construct socket
 	client_sock = socket(AF_INET,SOCK_STREAM,0);
 	
@@ -59,71 +59,57 @@ int main(int argc, char *argv[]){
 	
 	//Step 3: Request to connect server
 	if(connect(client_sock, (struct sockaddr*)&server_addr, sizeof(struct sockaddr)) < 0){
-		printf("\nError!Can not connect to sever! Client exit imediately! \n");
+		printf("\nError!Can not connect to sever! Client exit imediately! ");
 		return 0;
 	}
+		
+	//Step 4: Communicate with server
 	
-	while (1) {
-		char data[BUFF_SIZE] = "";
-		if (getOutput("lscpu", data) == 1) {
-			printf("Error.\n");
-		} else {
-			msg_len = strlen(data);
-			i = 0;
-			//Sent client's infomation
-			while(1) {
-				char temp[100];
-				char *mess;
-				if (msg_len >= 99) {
-					memcpy(temp, data + i, 99);
-					temp[99] = '\0';
-					mess = makeMessage(0, 99, temp);
-				} else {
-					memcpy(temp, data + i, msg_len);
-					temp[msg_len] = '\0';
-					mess = makeMessage(0, msg_len, temp);
-				}
+	// while (1) {
+	char data[BUFF_SIZE] = "";
+	if (getOutput("lscpu", data) == 1) {
+		printf("Error.\n");
+		// break;
+	} else {
+		msg_len = strlen(data);
+		i = 0;
+		//Sent client's infomation
+		while(1) {
+			char temp[100];
+			char *mess;
+			if (msg_len >= 99) {
+				memcpy(temp, data + i, 99);
+				temp[99] = '\0';
+				mess = makeMessage(0, 99, temp);
+			} else {
+				memcpy(temp, data + i, msg_len);
+				temp[msg_len] = '\0';
+				mess = makeMessage(0, msg_len, temp);
+			}
 
+			// Sent message with opcode = 0: Send all infomation of client's computer
+			bytes_sent = send(client_sock, mess, strlen(mess), 0);
+			if(bytes_sent <= 0){
+				printf("Error: Connection closed.\n");
+				break;
+			}
+
+			i += 99;
+			msg_len -= 99;
+			if (msg_len <= 0) {
+				mess = makeMessage(0, 0, "");
 				// Sent message with opcode = 0: Send all infomation of client's computer
 				bytes_sent = send(client_sock, mess, strlen(mess), 0);
 				if(bytes_sent <= 0){
 					printf("Error: Connection closed.\n");
 					break;
 				}
-
-				i += 99;
-				msg_len -= 99;
-				if (msg_len <= 0) {
-					mess = makeMessage(0, 0, "");
-					// Sent message with opcode = 0: Send all infomation of client's computer
-					bytes_sent = send(client_sock, mess, strlen(mess), 0);
-					if(bytes_sent <= 0){
-						printf("Error: Connection closed.\n");
-						break;
-					}
-					break;
-				}
+				break;
 			}
-			
-			printf("Delay:\n");
-			fgets(sendBuff, 100, stdin);
 		}
-		
-		// Receive responsing message from server
-		// bytes_received = recv(client_sock, rcvBuff, BUFF_SIZE, 0);
-		// if (bytes_received <= 0){
-		// 	printf("Error: Connection closed.\n");
-		// 	break;
-		// }
-		// rcvBuff[bytes_received] = '\0';
-		// printf("Reply from server: %s %lu\n", rcvBuff, strlen(rcvBuff));
-		
-
-		// printf("----------------------------------------------------\n");
 	}
 	
-	
-	//Step 4: Close socket
+	// Step 4: Close socket
 	close(client_sock);
 	return 0;
 }
