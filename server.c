@@ -12,18 +12,29 @@
 #define BACKLOG 20   /* Number of allowed connections */
 #define BUFF_SIZE 1024
 
+#define PATH "hardware-info"
+
+#define WAIT 0
+#define FINISH 1
+
+typedef struct client_info {
+	int status;
+	char ip_address[BUFF_SIZE];
+	char filename[BUFF_SIZE];
+} ClientInfo;
+
 int parseMess(char *str, int *opcode, int *length, char *payload) {
-    char temp_str[BUFF_SIZE];
+    char temp_str[BUFF_SIZE+5];
     memcpy(temp_str, str, 1);
     temp_str[1] = '\0';
     *opcode = atoi(temp_str);
 
-    memcpy(temp_str, str+1, 2);
-    temp_str[2] = '\0';
+    memcpy(temp_str, str+1, 4);
+    temp_str[4] = '\0';
     *length = atoi(temp_str);
 
-    memcpy(temp_str, str+3, strlen(str) - 3);
-    temp_str[strlen(str)-3] = '\0';
+    memcpy(temp_str, str+5, strlen(str) - 5);
+    temp_str[strlen(str)-5] = '\0';
     strcpy(payload, temp_str);
 
     return 0;
@@ -31,31 +42,28 @@ int parseMess(char *str, int *opcode, int *length, char *payload) {
 
 // Processing the received message(str) and save to file
 // Return opcode_type and key
-int processData(char *str, char *ipv4Client)
+int processData(ClientInfo* computer, char *str)
 {
     char payload[BUFF_SIZE];
     int opcode;
     int length;
     FILE *fp;
     parseMess(str, &opcode, &length, payload);
-
-    switch(opcode) {
-        case 0: // Save client's infomation
-            if (length > 0) {
-				char path[BUFF_SIZE] = "";
-				strcat(path, "hardware-info/");
-				strcat(path, ipv4Client);
-				strcat(path, ".txt");
-				if ((fp = fopen(path, "a")) == NULL) {
-					printf("Can't save file client's infomation.\n");
-					return 2;
-				}
-                fputs(payload, fp);
-                fclose(fp);
-            } else {
-                return 1;
-            }
-            break;
+    switch(computer->status) {
+    	case WAIT:
+    		switch(opcode) {
+        		case 0:
+		    		if ((fp = fopen(computer->filename, "a+")) == NULL) {
+							printf("Can't open file client's infomation.\n");
+							return 2;
+					}
+					fputs(payload, fp);
+		            fclose(fp);
+		            break;
+	        }
+    		break;
+    	case FINISH:
+    		break;
     }
     return 0;
 }
@@ -72,9 +80,10 @@ int main(int argc, char *argv[])
 	int nready, client[FD_SETSIZE];
 	ssize_t	ret;
 	fd_set	readfds, allset;
-	char sendBuff[BUFF_SIZE], rcvBuff[BUFF_SIZE];
+	char sendBuff[BUFF_SIZE+5], rcvBuff[BUFF_SIZE+5];
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
+	ClientInfo Client[FD_SETSIZE];
 	int port = atoi(argv[1]);
 	//Step 1: Construct a TCP socket to listen connection request
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1 ){  /* calls socket() */
@@ -137,6 +146,8 @@ int main(int argc, char *argv[])
 				if (i > maxi)
 					maxi = i;		/* max index in client[] array */
 
+				Client[i].status = 0;
+				sprintf(Client[i].filename,"%s/%s.txt",PATH, inet_ntoa(cliaddr.sin_addr));
 				if (--nready <= 0)
 					continue;		/* no more readable descriptors */
 			}
@@ -147,29 +158,17 @@ int main(int argc, char *argv[])
 				continue;
 			if (FD_ISSET(sockfd, &readfds)) {
 				//receives message from client
-				ret = recv(sockfd, rcvBuff, BUFF_SIZE, 0);
+				bzero(rcvBuff, BUFF_SIZE+5);
+				ret = recv(sockfd, rcvBuff, BUFF_SIZE+5, 0);
 				if (ret <= 0){
 					FD_CLR(sockfd, &allset);
 					close(sockfd);
 					client[i] = -1;
 				} else {
 					rcvBuff[ret] = '\0';
-					int opcode, length;
-					char payload[BUFF_SIZE];
-					// parseMess(rcvBuff, &opcode, &length, payload);
-
-					if (processData(rcvBuff, inet_ntoa(cliaddr.sin_addr)) == 1) {
+					if (processData(&Client[i], rcvBuff) == 1) {
 						printf("Receiving client's infomation is successed.\n");
 					}
-					
-					// printf("%d\n", ret);
-					// strcpy(sendBuff, rcvBuff);
-					// ret = send(sockfd, sendBuff, strlen(sendBuff), 0);
-					// if (ret <= 0){
-					// 	FD_CLR(sockfd, &allset);
-					// 	close(sockfd);
-					// 	client[i] = -1;
-					// }
 				}
 			}
 
