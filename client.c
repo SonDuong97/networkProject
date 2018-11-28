@@ -13,6 +13,7 @@
 #define BUFF_SIZE 1024
 #define TMP_FILENAME "tmp.txt"
 
+
 // Make message from opcode, length, payload to send to server
 char *makeMessage(int opcode, int lenght, char* payload)
 {
@@ -123,11 +124,11 @@ int main(int argc, char *argv[]){
 	char server_address[100] = "";
 	strcpy(server_address, argv[1]);
 	int server_port = atoi(argv[2]);
-	int client_sock;
+	int client_sock, i;
+	char buff[BUFF_SIZE];
 	struct sockaddr_in server_addr; /* server's address information */
-	int msg_len, bytes_sent, bytes_received, i;
-	char sendBuff[BUFF_SIZE], rcvBuff[BUFF_SIZE];
-
+	int msg_len, bytes_sent, bytes_received;
+	
 	//Step 1: Construct socket
 	client_sock = socket(AF_INET,SOCK_STREAM,0);
 	
@@ -138,9 +139,11 @@ int main(int argc, char *argv[]){
 	
 	//Step 3: Request to connect server
 	if(connect(client_sock, (struct sockaddr*)&server_addr, sizeof(struct sockaddr)) < 0){
-		printf("\nError!Can not connect to sever! Client exit imediately! \n");
+		printf("\nError!Can not connect to sever! Client exit imediately! ");
 		return 0;
 	}
+		
+	//Step 4: Communicate with server
 	
 	while (1) {
 			if (create_json(TMP_FILENAME) <=0) {
@@ -156,8 +159,7 @@ int main(int argc, char *argv[]){
 			fgets(sendBuff, 100, stdin);
 	}
 	
-	
-	//Step 4: Close socket
+	// Step 4: Close socket
 	close(client_sock);
 	return 0;
 }
