@@ -8,12 +8,14 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "cjson/cJSON.h"
+#include <time.h>
 
 #define BACKLOG 20   /* Number of allowed connections */
 #define BUFF_SIZE 1024
 
 #define PATH "hardware-info"
-
+#define FOLDER_IMG "image"
 #define WAIT 0
 #define FINISH 1
 
@@ -22,6 +24,84 @@ typedef struct client_info {
 	char ip_address[BUFF_SIZE];
 	char filename[BUFF_SIZE];
 } ClientInfo;
+
+int create_json(ClientInfo* cli_info, char *path_img)
+{
+    char str[32768], temp[2048];
+    char fieldname[4][1024] = {"infomation", "process_info", "mouse_operations", "keyboard_operations"};
+    char *out;
+    char datetime[1024];
+    char pathImg[1024];
+    char path_temp[1024];
+    time_t t = time(NULL);
+	struct tm tm = *localtime(&t);
+	
+	FILE *fp;
+	int i = 0;
+
+	sprintf(path_temp, "%s/%stemp.txt", PATH, cli_info->ip_address);
+	sprintf(datetime, "%d-%d-%d %d:%d:%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	sprintf(pathImg, "%s/[%s] %s.png", FOLDER_IMG, cli_info->ip_address, datetime);
+
+	if ((rename(path_img, pathImg)) != 0) {
+		fprintf(stderr, "Can't rename image file.\n");
+		return 0;
+	}
+
+    cJSON *computer = cJSON_CreateObject();
+    // getOutput("top -b -n1 | head -n 100", str);
+
+    // Set current date_time in obj Json
+    if (cJSON_AddStringToObject(computer, "datetime", datetime) == NULL)
+    {
+        return 0;
+    }
+
+    // Set path of image
+    if (cJSON_AddStringToObject(computer, "image", pathImg) == NULL)
+    {
+        return 0;
+    }
+
+    fp = fopen(path_temp,"r");
+    if (fp == NULL) {
+    	fprintf(stderr, "Failed to open file.\n");
+        return 0;
+    }
+
+    while(!feof(fp)){
+    	fgets(temp, 1024, fp);
+    	if (strcmp(temp, "FLAG_END_FIELD\n") == 0) {
+    		if (cJSON_AddStringToObject(computer, fieldname[i], str) == NULL){
+    			printf("Khong them dc.\n");
+    		}
+    		strcpy(str, "");
+    		i++;
+    	} else {
+    		strcat(str, temp);
+    	}
+    }
+    fclose(fp);
+    remove(path_temp);
+
+    out = cJSON_Print(computer);
+    if (out == NULL) {
+        fprintf(stderr, "Failed to print computer.\n");
+        return 0;
+    }
+
+    cJSON_Delete(computer);
+	fp = fopen(cli_info->filename,"a+");
+    if (fp == NULL) {
+    	fprintf(stderr, "Failed to open file.\n");
+        return 0;
+    }
+    // fprintf(stderr, "%s\n", out);
+    fputs(out, fp);
+    free(out);
+    fclose(fp);
+    return 1;
+}
 
 int parseMess(char *str, int *opcode, int *length, char *payload) {
     char temp_str[BUFF_SIZE+5];
@@ -48,18 +128,39 @@ int processData(ClientInfo* computer, char *str)
     int opcode;
     int length;
     FILE *fp;
+    char path_img[1024];
+    char path_temp[1024];
+    sprintf(path_img, "%s/%s.png", FOLDER_IMG, computer->ip_address);
+    sprintf(path_temp, "%s/%stemp.txt", PATH, computer->ip_address);
     parseMess(str, &opcode, &length, payload);
     switch(computer->status) {
     	case WAIT:
     		switch(opcode) {
         		case 0:
-		    		if ((fp = fopen(computer->filename, "a+")) == NULL) {
+        			if (length != 0) {
+        				if ((fp = fopen(path_temp, "a+")) == NULL) {
 							printf("Can't open file client's infomation.\n");
 							return 2;
-					}
-					fputs(payload, fp);
-		            fclose(fp);
+						}
+						fputs(payload, fp);
+			            fclose(fp);
+        			}
+
 		            break;
+
+		        case 1:
+		        	if (length != 0) {
+		        		if ((fp = fopen(path_img, "a+")) == NULL) {
+		        			printf("Can't open file client's image.\n");
+							return 3;
+		        		}
+		        		fwrite(payload, 1, strlen(payload), fp);
+		        		printf("%d %lu\n", length, strlen(payload));
+		        		fclose(fp);
+		        	} else {
+		        		create_json(computer, path_img);
+		        	}
+		        	break;
 	        }
     		break;
     	case FINISH:
@@ -67,6 +168,7 @@ int processData(ClientInfo* computer, char *str)
     }
     return 0;
 }
+
 
 
 int main(int argc, char *argv[])
@@ -147,6 +249,7 @@ int main(int argc, char *argv[])
 					maxi = i;		/* max index in client[] array */
 
 				Client[i].status = 0;
+				strcpy(Client[i].ip_address, inet_ntoa(cliaddr.sin_addr));
 				sprintf(Client[i].filename,"%s/%s.txt",PATH, inet_ntoa(cliaddr.sin_addr));
 				if (--nready <= 0)
 					continue;		/* no more readable descriptors */

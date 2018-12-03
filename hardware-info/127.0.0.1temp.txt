@@ -1,0 +1,126 @@
+H/W path     Device      Class       Description
+================================================
+                         system      Computer
+/0                       bus         Motherboard
+/0/0                     memory      1969MiB System memory
+/0/1                     processor   Intel(R) Core(TM) i5-7267U CPU @ 3.10GHz
+/0/100                   bridge      440BX/ZX/DX - 82443BX/ZX/DX Host bridge
+/0/100/1                 bridge      440BX/ZX/DX - 82443BX/ZX/DX AGP bridge
+/0/100/7                 bridge      82371AB/EB/MB PIIX4 ISA
+/0/100/7.1               storage     82371AB/EB/MB PIIX4 IDE
+/0/100/7.3               bridge      82371AB/EB/MB PIIX4 ACPI
+/0/100/7.7               generic     Virtual Machine Communication Interface
+/0/100/f                 display     SVGA II Adapter
+/0/100/10    scsi2       storage     53c1030 PCI-X Fusion-MPT Dual Ultra320 SCSI
+/0/100/11                bridge      PCI bridge
+/0/100/11/0              bus         USB1.1 UHCI Controller
+/0/100/11/1  ens33       network     82545EM Gigabit Ethernet Controller (Copper)
+/0/100/11/2              multimedia  ES1371 / Creative Labs CT2518/ES1373
+/0/100/11/3              bus         USB2 EHCI Controller
+/0/100/11/5              storage     SATA AHCI controller
+/0/100/11/5              storage     SATA AHCI controller
+FLAG_END_FIELD
+top - 11:44:21 up  5:04,  1 user,  load average: 0.32, 0.21, 0.13
+Tasks: 231 total,   1 running, 165 sleeping,   0 stopped,   1 zombie
+%Cpu(s):  5.4 us,  2.3 sy,  0.2 ni, 92.0 id,  0.1 wa,  0.0 hi,  0.0 si,  0.0 st
+KiB Mem :  2017272 total,   103128 free,  1121332 used,   792812 buff/cache
+KiB Swap:   998396 total,   979696 free,    18700 used.   652628 avail Mem 
+
+   PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
+  1801 sonduong  20   0 1230436 181436  68984 S  6.2  9.0   6:15.84 compiz
+  9356 sonduong  20   0   48868   3688   3080 R  6.2  0.2   0:00.01 top
+     1 root      20   0  119976   4296   2832 S  0.0  0.2   0:03.68 systemd
+     2 root      20   0       0      0      0 S  0.0  0.0   0:00.01 kthreadd
+     4 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 kworker/0:+
+     6 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 mm_percpu_+
+     7 root      20   0       0      0      0 S  0.0  0.0   0:00.78 ksoftirqd/0
+     8 root      20   0       0      0      0 I  0.0  0.0   0:11.04 rcu_sched
+     9 root      20   0       0      0      0 I  0.0  0.0   0:00.00 rcu_bh
+    10 root      rt   0       0      0      0 S  0.0  0.0   0:00.00 migration/0
+    11 root      rt   0       0      0      0 S  0.0  0.0   0:00.07 watchdog/0
+    12 root      20   0       0      0      0 S  0.0  0.0   0:00.00 cpuhp/0
+    13 root      20   0       0      0      0 S  0.0  0.0   0:00.00 kdevtmpfs
+    14 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 netns
+    15 root      20   0       0      0      0 S  0.0  0.0   0:00.00 rcu_tasks_+
+    16 root      20   0       0      0      0 S  0.0  0.0   0:00.00 kauditd
+    17 root      20   0       0      0      0 S  0.0  0.0   0:00.06 khungtaskd
+    18 root      20   0       0      0      0 S  0.0  0.0   0:00.00 oom_reaper
+    19 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 writeback
+    20 root      20   0       0      0      0 S  0.0  0.0   0:00.00 kcompactd0
+    21 root      25   5       0      0      0 S  0.0  0.0   0:00.00 ksmd
+    22 root      39  19       0      0      0 S  0.0  0.0   0:00.00 khugepaged
+    23 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 crypto
+    24 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 kintegrityd
+    25 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 kblockd
+    26 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 ata_sff
+    27 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 md
+    28 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 edac-poller
+    29 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 devfreq_wq
+    30 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 watchdogd
+    34 root      20   0       0      0      0 S  0.0  0.0   0:01.36 kswapd0
+    35 root      20   0       0      0      0 S  0.0  0.0   0:00.00 ecryptfs-k+
+    77 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 kthrotld
+    78 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 acpi_therm+
+    79 root      20   0       0      0      0 S  0.0  0.0   0:00.01 scsi_eh_0
+    80 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_0
+    81 root      20   0       0      0      0 S  0.0  0.0   0:00.01 scsi_eh_1
+    82 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_1
+    89 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 ipv6_addrc+
+    98 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 kstrp
+   115 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 charger_ma+
+   156 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 mpt_poll_0
+   157 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 mpt/0
+   158 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_2
+   159 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_2
+   160 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_3
+   161 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_3
+   162 root      20   0       0      0      0 S  0.0  0.0   0:00.17 scsi_eh_4
+   163 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_4
+   164 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_5
+   165 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_5
+   166 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_6
+   167 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_6
+   168 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_7
+   169 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_7
+   170 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_8
+   171 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_8
+   172 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_9
+   173 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_9
+   174 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_10
+   175 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_10
+   176 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_11
+   177 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_11
+   178 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_12
+   179 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_12
+   180 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_13
+   181 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_13
+   182 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_14
+   183 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_14
+   184 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_15
+   185 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_15
+   186 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_16
+   187 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_16
+   188 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_17
+   189 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_17
+   190 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_18
+   191 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_18
+   192 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_19
+   193 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_19
+   194 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_20
+   195 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_20
+   196 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_21
+   197 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_21
+   198 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_22
+   199 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_22
+   200 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_23
+   201 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_23
+   202 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_24
+   203 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_24
+   204 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_25
+   205 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_25
+   206 root      20   0       0      0      0 S  0.0  0.0   0:00.00 scsi_eh_26
+   207 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_26
+   207 root       0 -20       0      0      0 I  0.0  0.0   0:00.00 scsi_tmf_26
+FLAG_END_FIELD
+     0      0      0 S  0.0  0.0   0:00.00 scsi_eh_21
+ 

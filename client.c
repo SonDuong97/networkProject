@@ -12,7 +12,7 @@
 
 #define BUFF_SIZE 1024
 #define TMP_FILENAME "tmp.txt"
-
+#define TMP_IMAGE "image.png"
 
 // Make message from opcode, length, payload to send to server
 char *makeMessage(int opcode, int lenght, char* payload)
@@ -38,39 +38,10 @@ int getOutput(char *command, char *output_str) {
 	return 0;
 }
 
-int create_json(char * filename)
-{
-    char str[32768];
-    char *out;
-    cJSON *computer = cJSON_CreateObject();
-    getOutput("uname -a", str);
-    if (cJSON_AddStringToObject(computer, "infomation", str) == NULL)
-    {
-        return 0;
-    }
-
-    out = cJSON_Print(computer);
-    if (out == NULL) {
-        fprintf(stderr, "Failed to print computer.\n");
-        return 0;
-    }
-
-    cJSON_Delete(computer);
-    FILE *fp = fopen(filename,"w");
-    if (fp == NULL) {
-    	fprintf(stderr, "Failed to open file.\n");
-        return 0;
-    }
-    fputs(out, fp);
-    free(out);
-    fclose(fp);
-    return 1;
-}
-
 int sendFile(int opcode, char* filename, int client_sock)
 {
 	int lSize, bytes_sent, byte_read;
-    char buff[BUFF_SIZE];
+    char buff[BUFF_SIZE] = {0};
     char *mess;
 
 	FILE *fp = fopen(filename, "r");
@@ -94,14 +65,16 @@ int sendFile(int opcode, char* filename, int client_sock)
 		}
 		// Sent message with opcode = 0: Send all infomation of client's computer
 		mess = makeMessage(opcode, byte_read, buff);
+
 		bytes_sent = send(client_sock, mess, strlen(mess), 0);
+		printf("%d %lu %lu\n", byte_read, strlen(mess), strlen(buff));
 		if(bytes_sent <= 0){
 			printf("Error: Connection closed.\n");
 			return -1;
 		}
 		lSize -= byte_read;
 		if (lSize <=0) {
-			mess = makeMessage(0, 0, "");
+			mess = makeMessage(opcode, 0, "");
 			// Sent message with opcode = 0: Send all infomation of client's computer
 			bytes_sent = send(client_sock, mess, strlen(mess), 0);
 			if(bytes_sent <= 0){
@@ -116,6 +89,33 @@ int sendFile(int opcode, char* filename, int client_sock)
 	return 1;	
 }
 
+
+int saveInfo()
+{
+    char str[32768], temp[32768];
+    FILE *fp;
+
+    getOutput("lshw -short | head -n 20", temp);
+    strcat(str, temp);
+    strcat(str, "FLAG_END_FIELD\n");
+    strcpy(temp, "");
+    getOutput("top -b -n1 | head -n 100", temp);
+    strcat(str, temp);
+    strcat(str, "FLAG_END_FIELD\n");
+    system("import -window root image.png");
+
+    if ((fp = fopen(TMP_FILENAME, "w")) == NULL) {
+    	fprintf(stderr, "Failed to open file.\n");
+        return -1;
+    }
+    fputs(str, fp);
+    fclose(fp);
+  
+    return 0;
+}
+
+
+
 int main(int argc, char *argv[]){
 	if (argc <= 2) {
 		printf("The argument is error.\n");
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]){
 	strcpy(server_address, argv[1]);
 	int server_port = atoi(argv[2]);
 	int client_sock, i;
-	char buff[BUFF_SIZE];
+	char buff[BUFF_SIZE], sendBuff[BUFF_SIZE];
 	struct sockaddr_in server_addr; /* server's address information */
 	int msg_len, bytes_sent, bytes_received;
 	
@@ -145,18 +145,23 @@ int main(int argc, char *argv[]){
 		
 	//Step 4: Communicate with server
 	
-	while (1) {
-			if (create_json(TMP_FILENAME) <=0) {
-				fprintf(stderr, "Failed to open file.\n");
-				goto FINISH;
-			}			
-			if (sendFile(0,TMP_FILENAME, client_sock) <=0) {
-				fprintf(stderr, "Failed to open file.\n");
-				goto FINISH;
-			}
-			FINISH:
-			printf("Delay:\n");
-			fgets(sendBuff, 100, stdin);
+	while (1) {		
+		saveInfo();
+		if (sendFile(0,TMP_FILENAME, client_sock) <= 0) {
+			fprintf(stderr, "Failed to open file.\n");
+			goto FINISH;
+		} else {
+			printf("Xong filename\n");
+		}
+		if (sendFile(1,TMP_IMAGE, client_sock) <= 0) {
+			fprintf(stderr, "Failed to open file.\n");
+			goto FINISH;
+		} else {
+			printf("Xong image\n");
+		}
+		FINISH:
+		printf("Delay:\n");
+		fgets(sendBuff, 100, stdin);
 	}
 	
 	// Step 4: Close socket
