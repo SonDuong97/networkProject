@@ -15,11 +15,12 @@
 #define TMP_IMAGE "image.png"
 
 // Make message from opcode, length, payload to send to server
-char *makeMessage(int opcode, int lenght, char* payload)
+char *makeMessage(int opcode, int length, char* payload)
 {
     char* message = malloc(BUFF_SIZE+5);
     bzero(message, BUFF_SIZE+5);
-    sprintf(message, "%d%04d%s", opcode, lenght, payload);
+    sprintf(message, "%d%04d", opcode, length);
+    memcpy(message+5, payload, length);
     return message; 
 }
 
@@ -41,10 +42,11 @@ int getOutput(char *command, char *output_str) {
 int sendFile(int opcode, char* filename, int client_sock)
 {
 	int lSize, bytes_sent, byte_read;
-    char buff[BUFF_SIZE] = {0};
+    char buff[BUFF_SIZE];
     char *mess;
+    int i;
 
-	FILE *fp = fopen(filename, "r");
+	FILE *fp = fopen(filename, "rb");
 	if (fp == NULL) {
         fprintf(stderr, "Failed to open file.\n");
         return -1;
@@ -54,7 +56,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 	fseek (fp , 0 , SEEK_END);
 	lSize = ftell (fp);
 	rewind (fp);
-
+	bzero(buff, BUFF_SIZE);
 	while(lSize > 0) {
 		if (lSize > BUFF_SIZE) {
 			byte_read = fread (buff,1,BUFF_SIZE,fp);
@@ -63,11 +65,10 @@ int sendFile(int opcode, char* filename, int client_sock)
 			byte_read = fread (buff,1,lSize,fp);
 			if (byte_read != lSize) {fputs ("Reading error",stderr); exit (3);}
 		}
+
 		// Sent message with opcode = 0: Send all infomation of client's computer
 		mess = makeMessage(opcode, byte_read, buff);
-
-		bytes_sent = send(client_sock, mess, strlen(mess), 0);
-		printf("%d %lu %lu\n", byte_read, strlen(mess), strlen(buff));
+		bytes_sent = send(client_sock, mess, byte_read+5, 0);
 		if(bytes_sent <= 0){
 			printf("Error: Connection closed.\n");
 			return -1;
@@ -76,7 +77,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 		if (lSize <=0) {
 			mess = makeMessage(opcode, 0, "");
 			// Sent message with opcode = 0: Send all infomation of client's computer
-			bytes_sent = send(client_sock, mess, strlen(mess), 0);
+			bytes_sent = send(client_sock, mess, 5, 0);
 			if(bytes_sent <= 0){
 				printf("Error: Connection closed.\n");
 				return 0;

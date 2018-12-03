@@ -96,7 +96,6 @@ int create_json(ClientInfo* cli_info, char *path_img)
     	fprintf(stderr, "Failed to open file.\n");
         return 0;
     }
-    // fprintf(stderr, "%s\n", out);
     fputs(out, fp);
     free(out);
     fclose(fp);
@@ -104,7 +103,7 @@ int create_json(ClientInfo* cli_info, char *path_img)
 }
 
 int parseMess(char *str, int *opcode, int *length, char *payload) {
-    char temp_str[BUFF_SIZE+5];
+    char temp_str[5];
     memcpy(temp_str, str, 1);
     temp_str[1] = '\0';
     *opcode = atoi(temp_str);
@@ -113,10 +112,7 @@ int parseMess(char *str, int *opcode, int *length, char *payload) {
     temp_str[4] = '\0';
     *length = atoi(temp_str);
 
-    memcpy(temp_str, str+5, strlen(str) - 5);
-    temp_str[strlen(str)-5] = '\0';
-    strcpy(payload, temp_str);
-
+    memcpy(payload, str+5, *length);
     return 0;
 }
 
@@ -133,16 +129,18 @@ int processData(ClientInfo* computer, char *str)
     sprintf(path_img, "%s/%s.png", FOLDER_IMG, computer->ip_address);
     sprintf(path_temp, "%s/%stemp.txt", PATH, computer->ip_address);
     parseMess(str, &opcode, &length, payload);
+    counta++;
+    fprintf(stderr,"%d Length: %d\n",counta, length);
     switch(computer->status) {
     	case WAIT:
     		switch(opcode) {
         		case 0:
         			if (length != 0) {
-        				if ((fp = fopen(path_temp, "a+")) == NULL) {
+        				if ((fp = fopen(path_temp, "ab+")) == NULL) {
 							printf("Can't open file client's infomation.\n");
 							return 2;
 						}
-						fputs(payload, fp);
+						fwrite(payload, 1, length, fp);
 			            fclose(fp);
         			}
 
@@ -150,12 +148,11 @@ int processData(ClientInfo* computer, char *str)
 
 		        case 1:
 		        	if (length != 0) {
-		        		if ((fp = fopen(path_img, "a+")) == NULL) {
+		        		if ((fp = fopen(path_img, "ab+")) == NULL) {
 		        			printf("Can't open file client's image.\n");
 							return 3;
 		        		}
-		        		fwrite(payload, 1, strlen(payload), fp);
-		        		printf("%d %lu\n", length, strlen(payload));
+		        		fwrite(payload, 1, length, fp);
 		        		fclose(fp);
 		        	} else {
 		        		create_json(computer, path_img);
