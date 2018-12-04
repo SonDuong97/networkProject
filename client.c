@@ -76,41 +76,80 @@ int sendFile(int opcode, char* filename, int client_sock)
 		lSize -= byte_read;
 		if (lSize <=0) {
 			mess = makeMessage(opcode, 0, "");
+			printf("Da gui mess ket thuc.\n");
 			// Sent message with opcode = 0: Send all infomation of client's computer
 			bytes_sent = send(client_sock, mess, 5, 0);
 			if(bytes_sent <= 0){
 				printf("Error: Connection closed.\n");
-				return 0;
+				return -1;
 			}
 		}
 	}
 	fclose(fp);
 	remove(filename);
-	
-	return 1;	
+	return 0;	
 }
 
+int sendText(char *str, int client_sock, int opcode) {
+	int length = strlen(str);
+	int size = strlen(str), bytes_sent;
+	char temp[BUFF_SIZE];
+	char *mess;
 
-int saveInfo()
+	while (length > 0) {
+		if (length >= BUFF_SIZE) {
+			memcpy(temp, str + size - length, BUFF_SIZE);
+			temp[BUFF_SIZE] = '\0';
+			mess = makeMessage(opcode, BUFF_SIZE, temp);
+			
+			bytes_sent = send(client_sock, mess, strlen(mess), 0);
+			if(bytes_sent <= 0){
+				printf("Error: Connection closed.\n");
+				return 1;
+			}
+		} else {
+			memcpy(temp, str + size - length, length);
+			temp[length] = '\0';
+			mess = makeMessage(opcode, length, temp);
+			bytes_sent = send(client_sock, mess, strlen(mess), 0);
+			if(bytes_sent <= 0){
+				printf("Error: Connection closed.\n");
+				return 1;
+			}
+		}
+		length -= BUFF_SIZE;
+	}
+	mess = makeMessage(opcode, 0, "");
+	bytes_sent = send(client_sock, mess, strlen(mess), 0);
+	if(bytes_sent <= 0){
+		printf("Error: Connection closed.\n");
+		return 1;
+	}
+	return 0;
+}
+
+int sendAll(int client_sock)
 {
-    char str[32768], temp[32768];
-    FILE *fp;
+    char temp[32768] = "";
 
     getOutput("lshw -short | head -n 20", temp);
-    strcat(str, temp);
-    strcat(str, "FLAG_END_FIELD\n");
+    if (sendText(temp, client_sock, 0) != 0) {
+    	fprintf(stderr, "Sending message is wrong.\n");
+    	return -1;
+    }
     strcpy(temp, "");
     getOutput("top -b -n1 | head -n 100", temp);
-    strcat(str, temp);
-    strcat(str, "FLAG_END_FIELD\n");
-    system("import -window root image.png");
-
-    if ((fp = fopen(TMP_FILENAME, "w")) == NULL) {
-    	fprintf(stderr, "Failed to open file.\n");
-        return -1;
+    if (sendText(temp, client_sock, 1) != 0) {
+    	fprintf(stderr, "Sending message is wrong.\n");
+    	return -1;
     }
-    fputs(str, fp);
-    fclose(fp);
+
+    system("import -window root image.png");
+    if (sendFile(4, TMP_IMAGE, client_sock) != 0) {
+    	fprintf(stderr, "Sending image is wrong.\n");
+    	return -2;
+    }
+    
   
     return 0;
 }
@@ -147,22 +186,27 @@ int main(int argc, char *argv[]){
 	//Step 4: Communicate with server
 	
 	while (1) {		
-		saveInfo();
-		if (sendFile(0,TMP_FILENAME, client_sock) <= 0) {
-			fprintf(stderr, "Failed to open file.\n");
-			goto FINISH;
-		} else {
-			printf("Xong filename\n");
+		// saveInfo();
+		// if (sendFile(0,TMP_FILENAME, client_sock) <= 0) {
+		// 	fprintf(stderr, "Failed to open file.\n");
+		// 	goto FINISH;
+		// } else {
+		// 	printf("Xong filename\n");
+		// }
+		// if (sendFile(1,TMP_IMAGE, client_sock) <= 0) {
+		// 	fprintf(stderr, "Failed to open file.\n");
+		// 	goto FINISH;
+		// } else {
+		// 	printf("Xong image\n");
+		// }
+		// FINISH:
+		
+		if (sendAll(client_sock) != 0) {
+			fprintf(stderr, "Sending is wrong.\n");
 		}
-		if (sendFile(1,TMP_IMAGE, client_sock) <= 0) {
-			fprintf(stderr, "Failed to open file.\n");
-			goto FINISH;
-		} else {
-			printf("Xong image\n");
-		}
-		FINISH:
 		printf("Delay:\n");
 		fgets(sendBuff, 100, stdin);
+		// usleep(3000000);
 	}
 	
 	// Step 4: Close socket
