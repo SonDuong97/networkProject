@@ -13,7 +13,7 @@
 #define BUFF_SIZE 1024
 #define TMP_FILENAME "tmp.txt"
 #define TMP_IMAGE "image.png"
-
+#define TMP_OPERATION "event.txt"
 // Make message from opcode, length, payload to send to server
 char *makeMessage(int opcode, int length, char* payload)
 {
@@ -71,8 +71,10 @@ int sendFile(int opcode, char* filename, int client_sock)
 		bytes_sent = send(client_sock, mess, byte_read+5, 0);
 		if(bytes_sent <= 0){
 			printf("Error: Connection closed.\n");
+			free(mess);
 			return -1;
 		}
+		free(mess);
 		lSize -= byte_read;
 		if (lSize <=0) {
 			mess = makeMessage(opcode, 0, "");
@@ -81,8 +83,10 @@ int sendFile(int opcode, char* filename, int client_sock)
 			bytes_sent = send(client_sock, mess, 5, 0);
 			if(bytes_sent <= 0){
 				printf("Error: Connection closed.\n");
+				free(mess);
 				return -1;
 			}
+			free(mess);
 		}
 	}
 	fclose(fp);
@@ -105,8 +109,10 @@ int sendText(char *str, int client_sock, int opcode) {
 			bytes_sent = send(client_sock, mess, strlen(mess), 0);
 			if(bytes_sent <= 0){
 				printf("Error: Connection closed.\n");
+				free(mess);
 				return 1;
 			}
+			free(mess);
 		} else {
 			memcpy(temp, str + size - length, length);
 			temp[length] = '\0';
@@ -114,8 +120,10 @@ int sendText(char *str, int client_sock, int opcode) {
 			bytes_sent = send(client_sock, mess, strlen(mess), 0);
 			if(bytes_sent <= 0){
 				printf("Error: Connection closed.\n");
+				free(mess);
 				return 1;
 			}
+			free(mess);
 		}
 		length -= BUFF_SIZE;
 	}
@@ -123,14 +131,18 @@ int sendText(char *str, int client_sock, int opcode) {
 	bytes_sent = send(client_sock, mess, strlen(mess), 0);
 	if(bytes_sent <= 0){
 		printf("Error: Connection closed.\n");
+		free(mess);
 		return 1;
 	}
+	free(mess);
 	return 0;
 }
 
 int sendAll(int client_sock)
 {
     char temp[32768] = "";
+
+    system("xinput --test-xi2 --root | tee event.txt & sleep 5 ; kill $!");
 
     getOutput("lshw -short | head -n 20", temp);
     if (sendText(temp, client_sock, 0) != 0) {
@@ -144,8 +156,12 @@ int sendAll(int client_sock)
     	return -1;
     }
 
+    if (sendFile(2, TMP_OPERATION, client_sock) != 0) {
+    	fprintf(stderr, "Sending mouse and keyboard operations is wrong.\n");
+    }
+
     system("import -window root image.png");
-    if (sendFile(4, TMP_IMAGE, client_sock) != 0) {
+    if (sendFile(3, TMP_IMAGE, client_sock) != 0) {
     	fprintf(stderr, "Sending image is wrong.\n");
     	return -2;
     }
@@ -185,22 +201,7 @@ int main(int argc, char *argv[]){
 		
 	//Step 4: Communicate with server
 	
-	while (1) {		
-		// saveInfo();
-		// if (sendFile(0,TMP_FILENAME, client_sock) <= 0) {
-		// 	fprintf(stderr, "Failed to open file.\n");
-		// 	goto FINISH;
-		// } else {
-		// 	printf("Xong filename\n");
-		// }
-		// if (sendFile(1,TMP_IMAGE, client_sock) <= 0) {
-		// 	fprintf(stderr, "Failed to open file.\n");
-		// 	goto FINISH;
-		// } else {
-		// 	printf("Xong image\n");
-		// }
-		// FINISH:
-		
+	while (1) {	
 		if (sendAll(client_sock) != 0) {
 			fprintf(stderr, "Sending is wrong.\n");
 		}

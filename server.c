@@ -26,12 +26,12 @@ typedef struct client_info {
 	cJSON *json;
 } ClientInfo;
 
-char fieldname[4][BUFF_SIZE] = {"infomation", "process_info", "mouse_operations", "keyboard_operations"};
+char fieldname[3][BUFF_SIZE] = {"infomation", "process_info", "keyboard_mouse_operations"};
 
 int setInfo(cJSON *computer, int opcode, char *filename) {
 	FILE *fp = fopen(filename,"r");
 	char buff[32768] = "";
-	char str[32768] = "";
+	char str[999999] = "";
     if (fp == NULL) {
     	fprintf(stderr, "Failed to open file.\n");
         return -1;
@@ -98,85 +98,11 @@ int saveJsonToFile(ClientInfo* cli_info) {
     free(out);
     fclose(fp);
 
+    cli_info->json = cJSON_CreateObject();
     return 0;
 }
 
-// int create_json(ClientInfo* cli_info, char *path_img, cJSON *computer)
-// {
-//     char str[32768], temp[2048];
-    
-//     char *out;
-//     char datetime[1024];
-//     char pathImg[1024];
-//     char path_temp[1024];
-//     time_t t = time(NULL);
-// 	struct tm tm = *localtime(&t);
-	
-// 	FILE *fp;
-// 	int i = 0;
 
-// 	sprintf(path_temp, "%s/%stemp.txt", PATH, cli_info->ip_address);
-// 	sprintf(datetime, "%d-%d-%d %d:%d:%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-// 	sprintf(pathImg, "%s/[%s] %s.png", FOLDER_IMG, cli_info->ip_address, datetime);
-
-// 	if ((rename(path_img, pathImg)) != 0) {
-// 		fprintf(stderr, "Can't rename image file.\n");
-// 		return 0;
-// 	}
-
-//     cJSON *computer = cJSON_CreateObject();
-//     // getOutput("top -b -n1 | head -n 100", str);
-
-//     // Set current date_time in obj Json
-//     if (cJSON_AddStringToObject(computer, "datetime", datetime) == NULL)
-//     {
-//         return 0;
-//     }
-
-//     // Set path of image
-//     if (cJSON_AddStringToObject(computer, "image", pathImg) == NULL)
-//     {
-//         return 0;
-//     }
-
-//     fp = fopen(path_temp,"r");
-//     if (fp == NULL) {
-//     	fprintf(stderr, "Failed to open file.\n");
-//         return 0;
-//     }
-
-//     while(!feof(fp)){
-//     	fgets(temp, 1024, fp);
-//     	if (strcmp(temp, "FLAG_END_FIELD\n") == 0) {
-//     		if (cJSON_AddStringToObject(computer, fieldname[i], str) == NULL){
-//     			printf("Khong them dc.\n");
-//     		}
-//     		strcpy(str, "");
-//     		i++;
-//     	} else {
-//     		strcat(str, temp);
-//     	}
-//     }
-//     fclose(fp);
-//     remove(path_temp);
-
-//     out = cJSON_Print(computer);
-//     if (out == NULL) {
-//         fprintf(stderr, "Failed to print computer.\n");
-//         return 0;
-//     }
-
-//     cJSON_Delete(computer);
-// 	fp = fopen(cli_info->filename,"a+");
-//     if (fp == NULL) {
-//     	fprintf(stderr, "Failed to open file.\n");
-//         return 0;
-//     }
-//     fputs(out, fp);
-//     free(out);
-//     fclose(fp);
-//     return 1;
-// }
 
 int parseMess(char *str, int *opcode, int *length, char *payload) {
     char temp_str[5];
@@ -233,6 +159,7 @@ int processData(ClientInfo* cli_info, char *str)
         			}
 
 		            break;
+
 		        case 1:
 		        	sprintf(path_temp, "%s%d", path_temp, opcode);
         			if (length != 0) {
@@ -256,51 +183,27 @@ int processData(ClientInfo* cli_info, char *str)
         			}
 
 		            break;
+
 		        case 2:
-		        	sprintf(path_temp, "%s%d", path_temp, opcode);
+			        sprintf(path_temp, "%s%d", path_temp, opcode);
         			if (length != 0) {
-        				payload[length] = '\0';
-        				// sprintf(path_temp, "%s%d", path_temp, opcode);
-        				if ((fp = fopen(path_temp, "a+")) == NULL) {
-							printf("Can't open file client's infomation.\n");
+		        		if ((fp = fopen(path_temp, "ab+")) == NULL) {
+		        			printf("Can't open file client's image.\n");
 							return 1;
-						}
-						fputs(payload, fp);
-			            fclose(fp);
-        			} else {
-        				printf("da nhan mess ket thuc cua 2\n");
-
-        				if (setInfo(cli_info->json, opcode, path_temp) != 0) {
+		        		}
+		        		fwrite(payload, 1, length, fp);
+		        		fclose(fp);
+		        	} else {
+		        		printf("da nhan mess ket thuc cua 2\n");
+		        		
+		        		if (setInfo(cli_info->json, opcode, path_temp) != 0) {
         					fprintf(stderr, "Setting info is wrong.\n");
         					return 1;
         				}
-        				// cJSON *computer = cJSON_CreateObject();
-        			}
+		        	}
+		        	break;
 
-		            break;
 		        case 3:
-		        	sprintf(path_temp, "%s%d", path_temp, opcode);
-        			if (length != 0) {
-        				payload[length] = '\0';
-        				
-        				if ((fp = fopen(path_temp, "a+")) == NULL) {
-							printf("Can't open file client's infomation.\n");
-							return 1;
-						}
-						fputs(payload, fp);
-			            fclose(fp);
-        			} else {
-        				printf("da nhan mess ket thuc cua 3\n");
-
-        				if (setInfo(cli_info->json, opcode, path_temp) != 0) {
-        					fprintf(stderr, "Setting info is wrong.\n");
-        					return 1;
-        				}
-        				// cJSON *computer = cJSON_CreateObject();
-        			}
-
-		            break;
-		        case 4:
 		        	if (length != 0) {
 		        		if ((fp = fopen(path_img, "ab+")) == NULL) {
 		        			printf("Can't open file client's image.\n");
@@ -309,7 +212,7 @@ int processData(ClientInfo* cli_info, char *str)
 		        		fwrite(payload, 1, length, fp);
 		        		fclose(fp);
 		        	} else {
-		        		printf("da nhan mess ket thuc cua 4\n");
+		        		printf("da nhan mess ket thuc cua 3\n");
 		        		if (setPathImage(cli_info, path_img) != 0) {
 		        			fprintf(stderr, "Can't set path image.\n");
 		        			return 1;
