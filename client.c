@@ -12,8 +12,10 @@
 
 #define BUFF_SIZE 1024
 #define TMP_FILENAME "tmp.txt"
+#define TMP_INFO "info.txt"
 #define TMP_IMAGE "image.png"
 #define TMP_OPERATION "event.txt"
+#define TMP_PROCESSING "log.txt"
 // Make message from opcode, length, payload to send to server
 char *makeMessage(int opcode, int length, char* payload)
 {
@@ -24,20 +26,20 @@ char *makeMessage(int opcode, int length, char* payload)
     return message; 
 }
 
-int getOutput(char *command, char *output_str) {
-	FILE *fp = popen(command, "r");
-	char buff[BUFF_SIZE];
-	if (fp == NULL) {
-		return 1;
-	}
+// int getOutput(char *command, char *output_str) {
+// 	FILE *fp = popen(command, "r");
+// 	char buff[BUFF_SIZE];
+// 	if (fp == NULL) {
+// 		return 1;
+// 	}
 
-	while (!feof(fp)) {
-		fgets(buff, BUFF_SIZE, fp);
-		strcat(output_str, buff);
-	}
+// 	while (!feof(fp)) {
+// 		fgets(buff, BUFF_SIZE, fp);
+// 		strcat(output_str, buff);
+// 	}
 	
-	return 0;
-}
+// 	return 0;
+// }
 
 int sendFile(int opcode, char* filename, int client_sock)
 {
@@ -51,7 +53,6 @@ int sendFile(int opcode, char* filename, int client_sock)
         fprintf(stderr, "Failed to open file.\n");
         return -1;
     }
-
 	// obtain file size:
 	fseek (fp , 0 , SEEK_END);
 	lSize = ftell (fp);
@@ -69,24 +70,21 @@ int sendFile(int opcode, char* filename, int client_sock)
 		// Sent message with opcode = 0: Send all infomation of client's computer
 		mess = makeMessage(opcode, byte_read, buff);
 		bytes_sent = send(client_sock, mess, byte_read+5, 0);
+		free(mess);
 		if(bytes_sent <= 0){
 			printf("Error: Connection closed.\n");
-			free(mess);
 			return -1;
 		}
-		free(mess);
 		lSize -= byte_read;
 		if (lSize <=0) {
 			mess = makeMessage(opcode, 0, "");
-			printf("Da gui mess ket thuc.\n");
 			// Sent message with opcode = 0: Send all infomation of client's computer
 			bytes_sent = send(client_sock, mess, 5, 0);
+			free(mess);
 			if(bytes_sent <= 0){
 				printf("Error: Connection closed.\n");
-				free(mess);
 				return -1;
 			}
-			free(mess);
 		}
 	}
 	fclose(fp);
@@ -94,79 +92,34 @@ int sendFile(int opcode, char* filename, int client_sock)
 	return 0;	
 }
 
-int sendText(char *str, int client_sock, int opcode) {
-	int length = strlen(str);
-	int size = strlen(str), bytes_sent;
-	char temp[BUFF_SIZE];
-	char *mess;
-
-	while (length > 0) {
-		if (length >= BUFF_SIZE) {
-			memcpy(temp, str + size - length, BUFF_SIZE);
-			temp[BUFF_SIZE] = '\0';
-			mess = makeMessage(opcode, BUFF_SIZE, temp);
-			
-			bytes_sent = send(client_sock, mess, strlen(mess), 0);
-			if(bytes_sent <= 0){
-				printf("Error: Connection closed.\n");
-				free(mess);
-				return 1;
-			}
-			free(mess);
-		} else {
-			memcpy(temp, str + size - length, length);
-			temp[length] = '\0';
-			mess = makeMessage(opcode, length, temp);
-			bytes_sent = send(client_sock, mess, strlen(mess), 0);
-			if(bytes_sent <= 0){
-				printf("Error: Connection closed.\n");
-				free(mess);
-				return 1;
-			}
-			free(mess);
-		}
-		length -= BUFF_SIZE;
-	}
-	mess = makeMessage(opcode, 0, "");
-	bytes_sent = send(client_sock, mess, strlen(mess), 0);
-	if(bytes_sent <= 0){
-		printf("Error: Connection closed.\n");
-		free(mess);
-		return 1;
-	}
-	free(mess);
-	return 0;
-}
-
 int sendAll(int client_sock)
 {
-    char temp[32768] = "";
-
-    system("xinput --test-xi2 --root | tee event.txt & sleep 5 ; kill $!");
-
-    getOutput("lshw -short | head -n 20", temp);
-    if (sendText(temp, client_sock, 0) != 0) {
-    	fprintf(stderr, "Sending message is wrong.\n");
-    	return -1;
-    }
-    strcpy(temp, "");
-    getOutput("top -b -n1 | head -n 100", temp);
-    if (sendText(temp, client_sock, 1) != 0) {
-    	fprintf(stderr, "Sending message is wrong.\n");
-    	return -1;
-    }
-
+	char command[BUFF_SIZE];
+    sprintf(command,"xinput --test-xi2 --root > %s & sleep 5 ; kill $!", TMP_OPERATION);
+    system(command);
     if (sendFile(2, TMP_OPERATION, client_sock) != 0) {
     	fprintf(stderr, "Sending mouse and keyboard operations is wrong.\n");
+    	return -3;
+    }
+	sprintf(command,"lscpu > %s", TMP_INFO);
+    system(command);
+    if (sendFile(0, TMP_INFO, client_sock) != 0) {
+    	fprintf(stderr, "Sending infomation is wrong.\n");
+    	return -1;
     }
 
-    system("import -window root image.png");
-    if (sendFile(3, TMP_IMAGE, client_sock) != 0) {
-    	fprintf(stderr, "Sending image is wrong.\n");
+    sprintf(command,"top -b -n1 | head -n 10 > %s", TMP_PROCESSING);
+    system(command);
+    if (sendFile(1, TMP_PROCESSING, client_sock) != 0) {
+    	fprintf(stderr, "Sending infomation is wrong.\n");
     	return -2;
     }
-    
-  
+    sprintf(command,"import -window root %s", TMP_IMAGE);
+    system(command);
+    if (sendFile(3, TMP_IMAGE, client_sock) != 0) {
+    	fprintf(stderr, "Sending image is wrong.\n");
+    	return -4;
+    }
     return 0;
 }
 
