@@ -25,6 +25,9 @@
 #define TMP_INFO "info.txt"
 #define TMP_IMAGE "image.png"
 #define TMP_OPERATION "event.txt"
+#define STDIN 0
+#define STDOUT 1
+#define STDERR 2
 
 typedef struct client_info {
 	int status;
@@ -156,7 +159,6 @@ int processData(ClientInfo* cli_info, char *str)
     int length;
     FILE *fp;
     parseMess(str, &opcode, &length, payload);
-    if (length == 0) fprintf(stderr, "%d\n", length);
     switch(cli_info->status) {
     	case WAIT:
     		switch(opcode) {
@@ -239,6 +241,16 @@ int processData(ClientInfo* cli_info, char *str)
     return 0;
 }
 
+// Make message from opcode, length, payload to send to server
+char *makeMessage(int opcode, int length, char* payload)
+{
+    char* message = malloc(BUFF_SIZE+5);
+    bzero(message, BUFF_SIZE+5);
+    sprintf(message, "%d%04d", opcode, length);
+    memcpy(message+5, payload, length);
+    return message; 
+}
+
 
 
 int main(int argc, char *argv[])
@@ -248,7 +260,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int i, maxi, maxfd, listenfd, connfd, sockfd;
+	int i, maxi, maxfd, listenfd, connfd, sockfd, choose;
 	int nready, client[FD_SETSIZE];
 	ssize_t	ret;
 	fd_set	readfds, allset;
@@ -256,6 +268,7 @@ int main(int argc, char *argv[])
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
 	ClientInfo Client[FD_SETSIZE];
+	char * mess;
 	int port = atoi(argv[1]);
 	//Step 1: Construct a TCP socket to listen connection request
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1 ){  /* calls socket() */
@@ -286,6 +299,7 @@ int main(int argc, char *argv[])
 		client[i] = -1;			/* -1 indicates available entry */
 	FD_ZERO(&allset);
 	FD_SET(listenfd, &allset);
+	FD_SET(STDIN, &allset);
 	
 	//Step 4: Communicate with clients
 	while (1) {
@@ -295,7 +309,29 @@ int main(int argc, char *argv[])
 			perror("\nError: ");
 			return 0;
 		}
+		if (FD_ISSET(STDIN, &readfds)) {
+			// scanf("%d", &time);
+			// for (i = 0; i <= maxi; i++) {	/* check all clients for data */
+			// if ( (sockfd = client[i]) < 0)
+			// 	continue;
+			// if (FD_ISSET(sockfd, &readfds)) {
+			// 	mess = makeMessage(4, 0, itoa(time));
+			// 	ret = send(sockfd, sendBuff, BUFF_SIZE+5, 0);
+			// 	if (ret <= 0){
+			// 		FD_CLR(sockfd, &allset);
+			// 		close(sockfd);
+			// 		client[i] = -1;
+			// 	} else {
+			// 		if (processData(&Client[i], rcvBuff) == 0) {
+			// 		}
+			// 	}
+			// }
 
+			if (--nready <= 0)
+				break;		/* no more readable descriptors */
+		}			
+
+		}
 		if (FD_ISSET(listenfd, &readfds)) {	/* new client connection */
 			clilen = sizeof(cliaddr);
 			if((connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) < 0)
@@ -317,7 +353,6 @@ int main(int argc, char *argv[])
 					maxfd = connfd;		/* for select */
 				if (i > maxi)
 					maxi = i;		/* max index in client[] array */
-
 				Client[i].status = 0;
 				strcpy(Client[i].ip_address, inet_ntoa(cliaddr.sin_addr));
 				sprintf(Client[i].result,"%s/%s.txt",FOLDER_RESULT, inet_ntoa(cliaddr.sin_addr));
@@ -343,9 +378,7 @@ int main(int argc, char *argv[])
 					close(sockfd);
 					client[i] = -1;
 				} else {
-					rcvBuff[ret] = '\0';
 					if (processData(&Client[i], rcvBuff) == 0) {
-						// printf("Receiving client's infomation is successed.\n");
 					}
 				}
 			}

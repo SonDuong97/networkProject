@@ -26,21 +26,6 @@ char *makeMessage(int opcode, int length, char* payload)
     return message; 
 }
 
-// int getOutput(char *command, char *output_str) {
-// 	FILE *fp = popen(command, "r");
-// 	char buff[BUFF_SIZE];
-// 	if (fp == NULL) {
-// 		return 1;
-// 	}
-
-// 	while (!feof(fp)) {
-// 		fgets(buff, BUFF_SIZE, fp);
-// 		strcat(output_str, buff);
-// 	}
-	
-// 	return 0;
-// }
-
 int sendFile(int opcode, char* filename, int client_sock)
 {
 	int lSize, bytes_sent, byte_read;
@@ -66,10 +51,9 @@ int sendFile(int opcode, char* filename, int client_sock)
 			byte_read = fread (buff,1,lSize,fp);
 			if (byte_read != lSize) {fputs ("Reading error",stderr); exit (3);}
 		}
-
 		// Sent message with opcode = 0: Send all infomation of client's computer
 		mess = makeMessage(opcode, byte_read, buff);
-		bytes_sent = send(client_sock, mess, byte_read+5, 0);
+		bytes_sent = send(client_sock, mess, BUFF_SIZE+5, 0);
 		free(mess);
 		if(bytes_sent <= 0){
 			printf("Error: Connection closed.\n");
@@ -95,7 +79,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 int sendAll(int client_sock)
 {
 	char command[BUFF_SIZE];
-    sprintf(command,"xinput --test-xi2 --root > %s & sleep 5 ; kill $!", TMP_OPERATION);
+	sprintf(command,"xinput --test-xi2 --root > %s & sleep 5 ; kill $!", TMP_OPERATION);
     system(command);
     if (sendFile(2, TMP_OPERATION, client_sock) != 0) {
     	fprintf(stderr, "Sending mouse and keyboard operations is wrong.\n");
