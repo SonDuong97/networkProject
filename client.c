@@ -16,6 +16,8 @@
 #define TMP_IMAGE "image.png"
 #define TMP_OPERATION "event.txt"
 #define TMP_PROCESSING "log.txt"
+
+char time_wait[BUFF_SIZE] = "5";
 // Make message from opcode, length, payload to send to server
 char *makeMessage(int opcode, int length, char* payload)
 {
@@ -79,7 +81,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 int sendAll(int client_sock)
 {
 	char command[BUFF_SIZE];
-	sprintf(command,"xinput --test-xi2 --root > %s & sleep 5 ; kill $!", TMP_OPERATION);
+	sprintf(command,"xinput --test-xi2 --root > %s & sleep %s ; kill $!", TMP_OPERATION, time_wait);
     system(command);
     if (sendFile(2, TMP_OPERATION, client_sock) != 0) {
     	fprintf(stderr, "Sending mouse and keyboard operations is wrong.\n");
@@ -104,6 +106,36 @@ int sendAll(int client_sock)
     	fprintf(stderr, "Sending image is wrong.\n");
     	return -4;
     }
+    return 0;
+}
+
+int parseMess(char *str, int *opcode, int *length, char *payload) {
+    char temp_str[5];
+    memcpy(temp_str, str, 1);
+    temp_str[1] = '\0';
+    *opcode = atoi(temp_str);
+
+    memcpy(temp_str, str+1, 4);
+    temp_str[4] = '\0';
+    *length = atoi(temp_str);
+
+    memcpy(payload, str+5, *length);
+    return 0;
+}
+
+int rcvTime(int client_sock)
+{
+	int bytes_received;
+	int opcode, length;
+	char payload[BUFF_SIZE];
+	char buff[BUFF_SIZE+5];
+	bytes_received = recv(client_sock, buff, BUFF_SIZE+5, MSG_DONTWAIT);
+	if (bytes_received > 0) {
+		parseMess(buff, &opcode, &length, payload);
+		memcpy(time_wait, payload, length);
+		time_wait[length] = 0;
+		printf("%s", time_wait);
+	}
     return 0;
 }
 
@@ -139,12 +171,14 @@ int main(int argc, char *argv[]){
 	//Step 4: Communicate with server
 	
 	while (1) {	
+		// if (rcvTime(client_sock) != 0) {
+		// 	fprintf(stderr, "Receiving is wrong.\n");
+		// }
+
+
 		if (sendAll(client_sock) != 0) {
 			fprintf(stderr, "Sending is wrong.\n");
 		}
-		printf("Delay:\n");
-		fgets(sendBuff, 100, stdin);
-		// usleep(3000000);
 	}
 	
 	// Step 4: Close socket

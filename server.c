@@ -260,11 +260,11 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int i, maxi, maxfd, listenfd, connfd, sockfd, choose;
+	int i, maxi, maxfd, listenfd, connfd, sockfd, choose, time;
 	int nready, client[FD_SETSIZE];
 	ssize_t	ret;
 	fd_set	readfds, allset;
-	char sendBuff[BUFF_SIZE+5], rcvBuff[BUFF_SIZE+5];
+	char sendBuff[BUFF_SIZE+5], rcvBuff[BUFF_SIZE+5], time_wait[BUFF_SIZE];
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
 	ClientInfo Client[FD_SETSIZE];
@@ -310,27 +310,6 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 		if (FD_ISSET(STDIN, &readfds)) {
-			// scanf("%d", &time);
-			// for (i = 0; i <= maxi; i++) {	/* check all clients for data */
-			// if ( (sockfd = client[i]) < 0)
-			// 	continue;
-			// if (FD_ISSET(sockfd, &readfds)) {
-			// 	mess = makeMessage(4, 0, itoa(time));
-			// 	ret = send(sockfd, sendBuff, BUFF_SIZE+5, 0);
-			// 	if (ret <= 0){
-			// 		FD_CLR(sockfd, &allset);
-			// 		close(sockfd);
-			// 		client[i] = -1;
-			// 	} else {
-			// 		if (processData(&Client[i], rcvBuff) == 0) {
-			// 		}
-			// 	}
-			// }
-
-			if (--nready <= 0)
-				break;		/* no more readable descriptors */
-		}			
-
 		}
 		if (FD_ISSET(listenfd, &readfds)) {	/* new client connection */
 			clilen = sizeof(cliaddr);
