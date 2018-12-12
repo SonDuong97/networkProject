@@ -310,6 +310,26 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 		if (FD_ISSET(STDIN, &readfds)) {
+			scanf("%d", &time);
+			sprintf(time_wait,"%d", time);
+			for (i = 0; i <= maxi; i++) {	/* check all clients for data */
+				if ( (sockfd = client[i]) < 0)
+					continue;
+				if (FD_ISSET(sockfd, &allset)) {
+					mess = makeMessage(4, strlen(time_wait), time_wait);
+					ret = send(sockfd, mess, BUFF_SIZE+5, 0);
+					fprintf(stderr,"%s\n", mess);
+
+					free(mess);
+					if (ret <= 0){
+						FD_CLR(sockfd, &allset);
+						close(sockfd);
+						client[i] = -1;
+					}
+				}
+				if (--nready <= 0)
+					break;		/* no more readable descriptors */
+			}			
 		}
 		if (FD_ISSET(listenfd, &readfds)) {	/* new client connection */
 			clilen = sizeof(cliaddr);

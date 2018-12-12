@@ -134,7 +134,6 @@ int rcvTime(int client_sock)
 		parseMess(buff, &opcode, &length, payload);
 		memcpy(time_wait, payload, length);
 		time_wait[length] = 0;
-		printf("%s", time_wait);
 	}
     return 0;
 }
@@ -171,9 +170,9 @@ int main(int argc, char *argv[]){
 	//Step 4: Communicate with server
 	
 	while (1) {	
-		// if (rcvTime(client_sock) != 0) {
-		// 	fprintf(stderr, "Receiving is wrong.\n");
-		// }
+		if (rcvTime(client_sock) != 0) {
+			fprintf(stderr, "Receiving is wrong.\n");
+		}
 
 
 		if (sendAll(client_sock) != 0) {
