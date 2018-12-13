@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <pthread.h>
 #include "cjson/cJSON.h"
 
 #define BUFF_SIZE 1024
@@ -152,7 +153,8 @@ int main(int argc, char *argv[]){
 	char buff[BUFF_SIZE], sendBuff[BUFF_SIZE];
 	struct sockaddr_in server_addr; /* server's address information */
 	int msg_len, bytes_sent, bytes_received;
-	
+	pthread_t tid;
+
 	//Step 1: Construct socket
 	client_sock = socket(AF_INET,SOCK_STREAM,0);
 	
@@ -166,12 +168,13 @@ int main(int argc, char *argv[]){
 		printf("\nError!Can not connect to sever! Client exit imediately! ");
 		return 0;
 	}
-		
+	// pthread_create(&tid, NULL, &mouse_and_keyboard, NULL);
 	//Step 4: Communicate with server
-	
 	while (1) {	
 		if (rcvTime(client_sock) != 0) {
 			fprintf(stderr, "Receiving is wrong.\n");
+		} else {
+			// pthread_create(&tid, NULL, &mouse_and_keyboard, NULL);
 		}
 
 

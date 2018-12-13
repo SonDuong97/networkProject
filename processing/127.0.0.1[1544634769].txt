@@ -1,0 +1,10 @@
+top - 00:12:49 up 15:59,  1 user,  load average: 3.91, 2.39, 1.80
+Tasks: 274 total,   3 running, 215 sleeping,   0 stopped,   1 zombie
+%Cpu(s): 16.4 us,  4.3 sy,  0.5 ni, 76.1 id,  2.5 wa,  0.0 hi,  0.3 si,  0.0 st
+KiB Mem :  3810044 total,   107672 free,  2681740 used,  1020632 buff/cache
+KiB Swap:  4059132 total,  3186336 free,   872796 used.   521612 avail Mem 
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
+26623 anh       20   0   10600    776    708 R 100.0  0.0   0:19.83 server
+ 2449 anh       20   0 3835744 124584  38568 S  12.5  3.3  30:03.85 gnome-shell
+ 5099 anh       20   0 1663768 236924  30216 S   6.2  6.2   7:45.08 sublime_te+
