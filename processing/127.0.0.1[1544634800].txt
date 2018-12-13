@@ -1,0 +1,10 @@
+top - 00:13:20 up 16:00,  1 user,  load average: 3.56, 2.45, 1.84
+Tasks: 274 total,   2 running, 215 sleeping,   0 stopped,   1 zombie
+%Cpu(s): 16.3 us,  4.3 sy,  0.5 ni, 76.1 id,  2.6 wa,  0.0 hi,  0.3 si,  0.0 st
+KiB Mem :  3810044 total,   113704 free,  2668056 used,  1028284 buff/cache
+KiB Swap:  4059132 total,  3173792 free,   885340 used.   530672 avail Mem 
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
+26623 anh       20   0   10600    776    708 R 100.0  0.0   0:51.09 server
+   56 root      20   0       0      0      0 S  18.8  0.0   0:08.69 kswapd0
+ 2449 anh       20   0 3835532 123212  38088 S  12.5  3.2  30:05.75 gnome-shell

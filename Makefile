@@ -1,4 +1,4 @@
-all: build
+all: build setup
 
 build:
 		gcc server.c -o server cjson/cJSON.o

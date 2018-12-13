@@ -1,0 +1,10 @@
+top - 00:12:38 up 15:59,  1 user,  load average: 3.82, 2.32, 1.77
+Tasks: 272 total,   4 running, 214 sleeping,   0 stopped,   1 zombie
+%Cpu(s): 16.4 us,  4.3 sy,  0.5 ni, 76.1 id,  2.5 wa,  0.0 hi,  0.3 si,  0.0 st
+KiB Mem :  3810044 total,   118768 free,  2684816 used,  1006460 buff/cache
+KiB Swap:  4059132 total,  3187556 free,   871576 used.   508436 avail Mem 
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
+26623 anh       20   0   10600    776    708 R 100.0  0.0   0:09.13 server
+ 7586 anh       20   0 3559968 1.188g 172840 R  33.3 32.7  53:24.29 chrome
+ 1944 anh       20   0  403452  68576  51864 S   6.7  1.8  16:33.69 Xorg

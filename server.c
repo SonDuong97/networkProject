@@ -22,12 +22,13 @@
 #define FOLDER_LOG "logs"
 #define WAIT 0
 #define FINISH 1
-#define TMP_INFO "info.txt"
-#define TMP_IMAGE "image.png"
-#define TMP_OPERATION "event.txt"
-#define STDIN 0
-#define STDOUT 1
-#define STDERR 2
+// #define TMP_INFO "info.txt"
+// #define TMP_IMAGE "image.png"
+// #define TMP_OPERATION "event.txt"
+#define KEY_INFO "infomation"
+#define KEY_PROCESSING "process_info"
+#define KEY_KBMS "keyboard_mouse_operations"
+#define KEY_IMAGE "image"
 
 typedef struct client_info {
 	int status;
@@ -40,38 +41,14 @@ typedef struct client_info {
 	cJSON *json;
 } ClientInfo;
 
-char fieldname[3][BUFF_SIZE] = {"infomation", "process_info", "keyboard_mouse_operations"};
+// char fieldname[3][BUFF_SIZE] = {"infomation", "process_info", "keyboard_mouse_operations"};
 
-int setInfo(cJSON *computer, int opcode, char *filename) {
-	FILE *fp = fopen(filename,"r");
-	char buff[BUFF_SIZE] = "";
-	char str[32768] = "";
-    if (fp == NULL) {
-    	fprintf(stderr, "Failed to open file.\n");
-    	remove(filename);
-        return -1;
-    }
-    while(!feof(fp)) {
-    	fgets(buff, BUFF_SIZE, fp);
-    	strcat(str, buff);
-    }
-    fclose(fp);
-    remove(filename);
-	if (cJSON_AddStringToObject(computer, fieldname[opcode], str) == NULL)
-    {
-        return -1;
-    }
-    return 0;
-}
-
-int setPathImage(ClientInfo* cli_info, char *path) {
+int setDatetime(ClientInfo* cli_info) {
 	time_t t = time(NULL);
 	struct tm tm = *localtime(&t);
 	char datetime[2024];
-	char pathImg[2024];
 
 	sprintf(datetime, "%d-%d-%d %d:%d:%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	sprintf(pathImg, "%s/%s[%ld].png", FOLDER_IMG, cli_info->ip_address, (unsigned long) t);
 
 	// Set current date_time in obj Json
     if (cJSON_AddStringToObject(cli_info->json, "datetime", datetime) == NULL)
@@ -79,32 +56,20 @@ int setPathImage(ClientInfo* cli_info, char *path) {
         return -1;
     }
 
-    if ((rename(path, pathImg)) != 0) {
-		fprintf(stderr, "Can't rename image file.\n");
-		return -1;
-	}
-
-	// Set path of image
-    if (cJSON_AddStringToObject(cli_info->json, "image", pathImg) == NULL)
-    {
-        return -1;
-    }
-
     return 0;
 }
 
-int setPathLog(ClientInfo* cli_info, char *path) {
-	char pathLog[2024];
+int setPath(ClientInfo* cli_info, char *key,char* extension, char* folder, char* path) {
+	char path_file[2024];
 
-	sprintf(pathLog, "%s/%s[%ld].txt", FOLDER_LOG, cli_info->ip_address, (unsigned long)time(NULL));
+	sprintf(path_file, "%s/%s[%ld].%s", folder , cli_info->ip_address, (unsigned long)time(NULL), extension);
 
-    if ((rename(path, pathLog)) != 0) {
+    if ((rename(path, path_file)) != 0) {
 		fprintf(stderr, "Can't rename image file.\n");
 		return -1;
 	}
 
-	// Set path of image
-    if (cJSON_AddStringToObject(cli_info->json, fieldname[2], pathLog) == NULL)
+    if (cJSON_AddStringToObject(cli_info->json, key, path_file) == NULL)
     {
         return -1;
     }
@@ -171,12 +136,11 @@ int processData(ClientInfo* cli_info, char *str)
 						fwrite(payload, 1, length, fp);
 			            fclose(fp);
         			} else {
-        				if (setInfo(cli_info->json, opcode, cli_info->tmp_info) != 0) {
+        				if (setPath(cli_info, KEY_INFO, "txt", FOLDER_INFO, cli_info->tmp_info) != 0) {
         					fprintf(stderr, "Setting info is wrong.\n");
         					return 1;
         				}
         			}
-
 		            break;
 
 		        case 1:
@@ -188,7 +152,7 @@ int processData(ClientInfo* cli_info, char *str)
 						fwrite(payload, 1, length, fp);
 			            fclose(fp);
         			} else {
-        				if (setInfo(cli_info->json, opcode, cli_info->tmp_processing) != 0) {
+        				if (setPath(cli_info, KEY_PROCESSING, "txt", FOLDER_PROCESSING, cli_info->tmp_processing) != 0) {
         					fprintf(stderr, "Setting info is wrong.\n");
         					return 1;
         				}
@@ -198,15 +162,14 @@ int processData(ClientInfo* cli_info, char *str)
 
 		        case 2:
         			if (length != 0) {
-		        		if ((fp = fopen(cli_info->tmp_operation, "ab+")) == NULL) {
-		        			printf("Can't open file client's image.\n");
+		        		if ((fp = fopen(cli_info->tmp_operation, "a+")) == NULL) {
+		        			printf("Can't open file client's mouse and keyboard event\n");
 							return 1;
 		        		}
 		        		fwrite(payload, 1, length, fp);
 		        		fclose(fp);
 		        	} else {
-		        		
-		        		if (setPathLog(cli_info, cli_info->tmp_operation) != 0) {
+		        		if (setPath(cli_info, KEY_KBMS, "txt", FOLDER_LOG, cli_info->tmp_operation) != 0) {
         					fprintf(stderr, "Setting info is wrong.\n");
         					return 1;
         				}
@@ -222,10 +185,15 @@ int processData(ClientInfo* cli_info, char *str)
 		        		fwrite(payload, 1, length, fp);
 		        		fclose(fp);
 		        	} else {
-		        		if (setPathImage(cli_info, cli_info->tmp_image) != 0) {
-		        			fprintf(stderr, "Can't set path image.\n");
+		        		if (setPath(cli_info, KEY_IMAGE, "png", FOLDER_IMG, cli_info->tmp_image) != 0) {
+        					fprintf(stderr, "Setting info is wrong.\n");
+        					return 1;
+        				}
+
+        				if (setDatetime(cli_info) != 0) {
+        					fprintf(stderr, "Can't set datetime.\n");
 		        			return 1;
-		        		}
+        				}
 
 		        		if (saveJsonToFile(cli_info) != 0) {
 		        			fprintf(stderr, "Can't save json.\n");
@@ -263,7 +231,7 @@ int main(int argc, char *argv[])
 	int i, maxi, maxfd, listenfd, connfd, sockfd, choose, time;
 	int nready, client[FD_SETSIZE];
 	ssize_t	ret;
-	fd_set	readfds, allset;
+	fd_set	readfds, allset, writefds;
 	char sendBuff[BUFF_SIZE+5], rcvBuff[BUFF_SIZE+5], time_wait[BUFF_SIZE];
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
@@ -299,17 +267,19 @@ int main(int argc, char *argv[])
 		client[i] = -1;			/* -1 indicates available entry */
 	FD_ZERO(&allset);
 	FD_SET(listenfd, &allset);
-	FD_SET(STDIN, &allset);
+	FD_SET(STDIN_FILENO, &allset);
+	FD_SET(STDOUT_FILENO, &allset);
 	
 	//Step 4: Communicate with clients
 	while (1) {
 		readfds = allset;		/* structure assignment */
-		nready = select(maxfd+1, &readfds, NULL, NULL, NULL);
+		writefds = allset;
+		nready = select(maxfd+1, &readfds, &writefds, NULL, NULL);
 		if(nready < 0){
 			perror("\nError: ");
 			return 0;
 		}
-		if (FD_ISSET(STDIN, &readfds)) {
+		if (FD_ISSET(STDIN_FILENO, &readfds)) {
 			scanf("%d", &time);
 			sprintf(time_wait,"%d", time);
 			for (i = 0; i <= maxi; i++) {	/* check all clients for data */
@@ -330,6 +300,9 @@ int main(int argc, char *argv[])
 				if (--nready <= 0)
 					break;		/* no more readable descriptors */
 			}			
+		}
+		if (FD_ISSET(STDOUT_FILENO, &writefds)) {
+			// printf("Choose function: \n");	
 		}
 		if (FD_ISSET(listenfd, &readfds)) {	/* new client connection */
 			clilen = sizeof(cliaddr);
