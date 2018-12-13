@@ -244,6 +244,16 @@ int showMenu(int menuno, char* time_wait) {
 	}
 }
 
+int resole(int menuno, int choose) {
+	switch (menuno) {
+		case 0:
+			
+			break;
+		case 1:
+			break;
+	}
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -307,8 +317,7 @@ int main(int argc, char *argv[])
 			showMenu(menuno, time_wait);
 		}
 		if (FD_ISSET(STDIN_FILENO, &readfds)) {
-			scanf("%d", &choose);
-			resolve(menuno,choose)
+			scanf("%d", &time);
 			sprintf(time_wait,"%d", time);
 			for (i = 0; i <= maxi; i++) {	/* check all clients for data */
 				if ( (sockfd = client[i]) < 0)
