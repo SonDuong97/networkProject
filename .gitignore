@@ -2,3 +2,8 @@ client
 server
 1
 test.c
+/images
+/info
+/logs
+/processing
+/result

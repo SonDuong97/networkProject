@@ -18,7 +18,7 @@
 #define TMP_OPERATION "event.txt"
 #define TMP_PROCESSING "log.txt"
 
-char time_wait[BUFF_SIZE] = "5";
+char time_wait[BUFF_SIZE];
 // Make message from opcode, length, payload to send to server
 char *makeMessage(int opcode, int length, char* payload)
 {

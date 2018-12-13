@@ -219,6 +219,30 @@ char *makeMessage(int opcode, int length, char* payload)
     return message; 
 }
 
+int sendTime(int sockfd, char* time_wait) {
+	char *mess;
+	int ret;
+	mess = makeMessage(4, strlen(time_wait), time_wait);
+	ret = send(sockfd, mess, BUFF_SIZE+5, 0);
+	free(mess);
+	if (ret <= 0){
+		return -1;
+	}
+	return 1;
+}
+
+int showMenu(int menuno, char* time_wait) {
+	switch (menuno) {
+		case 0:
+			printf("1. Set time (%s).\n", time_wait);
+			printf("2. Search by IP.\n");
+			printf("3. Search by Datetime.\n");
+			printf("Choose: \n");
+			break;
+		case 1:
+			break;
+	}
+}
 
 
 int main(int argc, char *argv[])
@@ -228,11 +252,11 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int i, maxi, maxfd, listenfd, connfd, sockfd, choose, time;
+	int i, maxi, maxfd, listenfd, connfd, sockfd, choose, time, menuno = 0;
 	int nready, client[FD_SETSIZE];
 	ssize_t	ret;
 	fd_set	readfds, allset, writefds;
-	char sendBuff[BUFF_SIZE+5], rcvBuff[BUFF_SIZE+5], time_wait[BUFF_SIZE];
+	char sendBuff[BUFF_SIZE+5], rcvBuff[BUFF_SIZE+5], time_wait[BUFF_SIZE] = "10";
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
 	ClientInfo Client[FD_SETSIZE];
@@ -279,18 +303,18 @@ int main(int argc, char *argv[])
 			perror("\nError: ");
 			return 0;
 		}
+		if (FD_ISSET(STDOUT_FILENO, &writefds)) {
+			showMenu(menuno, time_wait);
+		}
 		if (FD_ISSET(STDIN_FILENO, &readfds)) {
-			scanf("%d", &time);
+			scanf("%d", &choose);
+			resolve(menuno,choose)
 			sprintf(time_wait,"%d", time);
 			for (i = 0; i <= maxi; i++) {	/* check all clients for data */
 				if ( (sockfd = client[i]) < 0)
 					continue;
 				if (FD_ISSET(sockfd, &allset)) {
-					mess = makeMessage(4, strlen(time_wait), time_wait);
-					ret = send(sockfd, mess, BUFF_SIZE+5, 0);
-					fprintf(stderr,"%s\n", mess);
-
-					free(mess);
+					ret = sendTime(sockfd, time_wait);
 					if (ret <= 0){
 						FD_CLR(sockfd, &allset);
 						close(sockfd);
@@ -300,10 +324,10 @@ int main(int argc, char *argv[])
 				if (--nready <= 0)
 					break;		/* no more readable descriptors */
 			}			
+		} else {
+			menuno = 100;
 		}
-		if (FD_ISSET(STDOUT_FILENO, &writefds)) {
-			// printf("Choose function: \n");	
-		}
+		
 		if (FD_ISSET(listenfd, &readfds)) {	/* new client connection */
 			clilen = sizeof(cliaddr);
 			if((connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) < 0)
@@ -325,6 +349,7 @@ int main(int argc, char *argv[])
 					maxfd = connfd;		/* for select */
 				if (i > maxi)
 					maxi = i;		/* max index in client[] array */
+
 				Client[i].status = 0;
 				strcpy(Client[i].ip_address, inet_ntoa(cliaddr.sin_addr));
 				sprintf(Client[i].result,"%s/%s.txt",FOLDER_RESULT, inet_ntoa(cliaddr.sin_addr));
@@ -333,6 +358,12 @@ int main(int argc, char *argv[])
 				sprintf(Client[i].tmp_operation,"%s/%s.txt",FOLDER_LOG, inet_ntoa(cliaddr.sin_addr));
 				sprintf(Client[i].tmp_processing,"%s/%s.txt",FOLDER_PROCESSING, inet_ntoa(cliaddr.sin_addr));
 				Client[i].json = cJSON_CreateObject();
+				ret = sendTime(connfd, time_wait);
+				if (ret <= 0){
+					FD_CLR(sockfd, &allset);
+					close(sockfd);
+					client[i] = -1;
+				}
 				if (--nready <= 0)
 					continue;		/* no more readable descriptors */
 			}
@@ -354,7 +385,6 @@ int main(int argc, char *argv[])
 					}
 				}
 			}
-
 			if (--nready <= 0)
 				break;		/* no more readable descriptors */
 		}
