@@ -124,6 +124,7 @@ int processData(ClientInfo* cli_info, char *str)
     int length;
     FILE *fp;
     parseMess(str, &opcode, &length, payload);
+    fprintf(stderr, "%d %d\n",opcode, length);
     switch(cli_info->status) {
     	case WAIT:
     		switch(opcode) {
@@ -313,9 +314,9 @@ int main(int argc, char *argv[])
 			perror("\nError: ");
 			return 0;
 		}
-		if (FD_ISSET(STDOUT_FILENO, &writefds)) {
-			showMenu(menuno, time_wait);
-		}
+		// if (FD_ISSET(STDOUT_FILENO, &writefds)) {
+		// 	// showMenu(menuno, time_wait);
+		// }
 		if (FD_ISSET(STDIN_FILENO, &readfds)) {
 			scanf("%d", &time);
 			sprintf(time_wait,"%d", time);

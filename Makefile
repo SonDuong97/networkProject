@@ -9,4 +9,4 @@ setup:
 
 
 clean:
-		rm -rf server client
+		rm -rf server client images logs processing	info result
