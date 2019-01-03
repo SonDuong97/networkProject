@@ -116,6 +116,7 @@ int processData(ClientInfo* cli_info, int *str)
     int length;
     FILE *fp;
     parseMess(str, &opcode, &length, payload);
+    fprintf(stderr, "%d %d\n",opcode, length);
     switch(cli_info->status) {
     	case WAIT:
     		switch(opcode) {
@@ -226,19 +227,6 @@ int sendTime(int sockfd, int *time_wait) {
 	return 1;
 }
 
-int showMenu(int menuno, int* time_wait) {
-	switch (menuno) {
-		case 0:
-			printf("1. Set time (%d).\n", *time_wait);
-			printf("2. Search by IP.\n");
-			printf("3. Search by Datetime.\n");
-			printf("Choose: \n");
-			break;
-		case 1:
-			break;
-	}
-}
-
 int resole(int menuno, int choose) {
 	switch (menuno) {
 		case 0:
@@ -307,9 +295,6 @@ int main(int argc, char *argv[])
 		if(nready < 0){
 			perror("\nError: ");
 			return 0;
-		}
-		if (FD_ISSET(STDOUT_FILENO, &writefds)) {
-			showMenu(menuno, &time_wait);
 		}
 		if (FD_ISSET(STDIN_FILENO, &readfds)) {
 			scanf("%d", &time_wait);
