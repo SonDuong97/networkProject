@@ -92,6 +92,7 @@ int saveJsonToFile(ClientInfo* cli_info) {
         return 1;
     }
     fputs(out, fp);
+    fputs("\n", fp);
     free(out);
     fclose(fp);
     cli_info->json = cJSON_CreateObject();
@@ -225,6 +226,43 @@ int sendTime(int sockfd, int *time_wait) {
 	}
 	return 1;
 }
+
+int getData(char *ip, cJSON *client) {
+	char path[BUFF_SIZE] = "";
+	sprintf(path, "result/%s.txt", ip);
+	FILE *fin = fopen(path, "r");
+	char temp[BUFF_SIZE] = "";
+	char json[BUFF_SIZE] = "";
+	int curr = 0;
+	cJSON *results = NULL;
+	results = cJSON_AddArrayToObject(client, "results");
+	if (cJSON_AddStringToObject(client, "ip", ip) == NULL)
+    {
+        printf("k them dc.\n");
+    }
+	if (fin == NULL) {
+		fprintf(stderr, "Loi doc file.\n");
+		return -1;
+	}
+
+	while (!feof(fin)){
+		strcpy(temp, "");
+		fgets(temp, BUFF_SIZE, fin);
+		strcat(json, temp);
+		if (strcmp(temp, "}\n") == 0) {
+			json[strlen(json) - 1] = '\0';
+			cJSON *result = cJSON_Parse(json);
+			cJSON_AddItemToArray(results, result);
+			curr++;
+			strcpy(json, "");
+		}
+	}
+
+	fclose(fin);
+	return 0;
+}
+
+int searchByIp(char *ip, cJSON)
 
 int showMenu(int menuno, int* time_wait) {
 	switch (menuno) {
