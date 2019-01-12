@@ -10,10 +10,11 @@
 #include <unistd.h>
 #include <pthread.h> 
 #include <time.h>
+#include <dirent.h> 
 #include "cjson/cJSON.h"
 
 #define BACKLOG 20   /* Number of allowed connections */
-#define BUFF_SIZE 1024
+#define BUFF_SIZE 1032
 #define NAME_SIZE 256
 #define MAX_LENGTH 256
 
@@ -43,7 +44,257 @@ typedef struct client_info {
 	cJSON *json;
 } ClientInfo;
 
+
 fd_set	readfds, allset, writefds;
+int nready, client[FD_SETSIZE], maxi, time_wait = 10;
+typedef struct client_detail {
+	cJSON *value;
+	struct client_detail *next;
+} Client_detail;
+
+Client_detail *head = NULL;
+
+int insertFirstPos(cJSON *client) {
+	Client_detail *temp = (Client_detail *)malloc(sizeof(Client_detail));
+	temp->value = client;
+	temp->next = head;
+	// Update first list address
+	head = temp;
+	return 0;
+}
+
+int getDataFromFile(char *ip, cJSON *client) {
+	char path[BUFF_SIZE] = "";
+	sprintf(path, "result/%s.txt", ip);
+	FILE *fin = fopen(path, "r");
+	char temp[BUFF_SIZE] = "";
+	char json[BUFF_SIZE] = "";
+	int curr = 0;
+	cJSON *results = NULL;
+	results = cJSON_AddArrayToObject(client, "results");
+	if (cJSON_AddStringToObject(client, "ip", ip) == NULL)
+    {
+        printf("k them dc.\n");
+    }
+	if (fin == NULL) {
+		return -1;
+	}
+
+	while (!feof(fin)){
+		strcpy(temp, "");
+		fgets(temp, BUFF_SIZE, fin);
+		strcat(json, temp);
+		if (strcmp(temp, "}\n") == 0) {
+			json[strlen(json) - 1] = '\0';
+			cJSON *result = cJSON_Parse(json);
+			cJSON_AddItemToArray(results, result);
+			curr++;
+			strcpy(json, "");
+		}
+	}
+
+	fclose(fin);
+	return 0;
+}
+
+int searchByIp() {
+	char ip[BUFF_SIZE];
+	cJSON *res_client = cJSON_CreateObject();
+	cJSON *results;
+	cJSON *result;
+	char command[BUFF_SIZE];
+	int i = 1, select = 0, back;
+	printf("Enter a ipv4: \n");
+	scanf("%s", ip);
+	if (getDataFromFile(ip, res_client) == -1) {
+		printf("Ip khong ton tai.\n");
+		return -1;
+	}
+	// char *str = cJSON_Print(res_client);
+	// printf("%s\n", str);
+
+	// ip = cJSON_GetObjectItemCaseSensitive(res_client, "ip");
+	while (1) {
+		i = 1;
+		results = cJSON_GetObjectItemCaseSensitive(res_client, "results");
+		cJSON_ArrayForEach(result, results) {
+			cJSON *datetime = cJSON_GetObjectItemCaseSensitive(result, "datetime");
+			printf("%d. %s\n", i, datetime->valuestring);
+			i++;
+		}
+		back = i;
+		printf("%d. BACK\n", back);
+		printf("Enter a number: \n");
+		while (1) {
+			scanf("%d", &select);
+			if (select > 0) {
+				break;
+			} else {
+				printf("Wrong number. Enter again: \n");
+			}
+		}
+		if (select == back) {
+			break;
+		}
+		i = 1;
+		cJSON_ArrayForEach(result, results) {
+			if (i != select) {
+				i++;
+				continue;
+			}
+			cJSON *infomation = cJSON_GetObjectItemCaseSensitive(result, "infomation");
+			cJSON *keyboard_mouse_operations = cJSON_GetObjectItemCaseSensitive(result, "keyboard_mouse_operations");
+			cJSON *process_info = cJSON_GetObjectItemCaseSensitive(result, "process_info");
+			cJSON *image = cJSON_GetObjectItemCaseSensitive(result, "image");
+			
+			sprintf(command, "xdg-open %s", infomation->valuestring);
+			system(command);
+			sprintf(command, "xdg-open %s", process_info->valuestring);
+			system(command);
+			sprintf(command, "xdg-open %s", image->valuestring);
+			system(command);
+			break;
+		}
+		system("clear");
+	}
+	
+	return 0;
+}
+
+int searchByTime(char *time, cJSON *arr_res) {
+	Client_detail *temp = head;
+	cJSON *result = NULL;
+	cJSON *results = NULL;
+	cJSON *datetime = NULL;
+	cJSON *ip = NULL;
+	int flag = 0; // if flag = 0 then no result else had result
+	cJSON *res = cJSON_AddArrayToObject(arr_res, "results");
+
+	while (temp != NULL) {
+		ip = cJSON_GetObjectItemCaseSensitive(temp->value, "ip");
+		results = cJSON_GetObjectItemCaseSensitive(temp->value, "results");
+		cJSON_ArrayForEach(result, results) {
+			datetime = cJSON_GetObjectItemCaseSensitive(result, "datetime");
+			if (strcmp(datetime->valuestring, time) == 0) {
+				cJSON *buff = cJSON_CreateObject();
+				cJSON *infomation = cJSON_GetObjectItemCaseSensitive(result, "infomation");
+				cJSON *keyboard_mouse_operations = cJSON_GetObjectItemCaseSensitive(result, "keyboard_mouse_operations");
+				cJSON *process_info = cJSON_GetObjectItemCaseSensitive(result, "process_info");
+				cJSON *image = cJSON_GetObjectItemCaseSensitive(result, "image");
+				cJSON_AddStringToObject(buff, "ip", ip->valuestring);
+				cJSON_AddStringToObject(buff, "infomation", infomation->valuestring);
+				cJSON_AddStringToObject(buff, "keyboard_mouse_operations", keyboard_mouse_operations->valuestring);
+				cJSON_AddStringToObject(buff, "process_info", process_info->valuestring);
+				cJSON_AddStringToObject(buff, "image", image->valuestring);
+				cJSON_AddStringToObject(buff, "datetime", datetime->valuestring);
+			    cJSON_AddItemToArray(res, buff);
+			    flag = 1;
+			}
+		}
+		temp = temp->next;
+	}
+
+	return flag > 0;
+}
+
+int searchTime() {
+	char datetime[NAME_SIZE], command[NAME_SIZE];
+	cJSON *arr_res = cJSON_CreateObject();
+	cJSON *results;
+	cJSON *result;
+	int i = 1, select, back;
+	char c;
+	printf("Enter a datetime(yyyy-mm-dd hh:mm:ss): ");
+	scanf("%c%[^\n]s", &c, datetime);
+
+	if (searchByTime(datetime, arr_res) == 1) {
+		while (1) {
+			i = 1;
+			results = cJSON_GetObjectItemCaseSensitive(arr_res, "results");
+			cJSON_ArrayForEach(result, results) {
+				cJSON *ip = cJSON_GetObjectItemCaseSensitive(result, "ip");
+				printf("%d. %s\n", i, ip->valuestring);
+				i++;
+			}
+			back = i;
+			printf("%d. BACK\n", back);
+			printf("Enter a number: \n");
+			while (1) {
+				scanf("%d", &select);
+				if (select > 0) {
+					break;
+				} else {
+					printf("Wrong number. Enter again: \n");
+				}
+			}
+
+			if (select == back) {
+				break;
+			}
+
+			i = 1;
+			cJSON_ArrayForEach(result, results) {
+				if (i != select) {
+					i++;
+					continue;
+				}
+				cJSON *infomation = cJSON_GetObjectItemCaseSensitive(result, "infomation");
+				cJSON *keyboard_mouse_operations = cJSON_GetObjectItemCaseSensitive(result, "keyboard_mouse_operations");
+				cJSON *process_info = cJSON_GetObjectItemCaseSensitive(result, "process_info");
+				cJSON *image = cJSON_GetObjectItemCaseSensitive(result, "image");
+
+				sprintf(command, "xdg-open %s", infomation->valuestring);
+				system(command);
+				sprintf(command, "xdg-open %s", process_info->valuestring);
+				system(command);
+				sprintf(command, "xdg-open %s", image->valuestring);
+				system(command);
+				break;
+			}
+			system("clear");
+		}
+	} else {
+		printf("No result.\n");
+	}
+
+	return 0;
+}
+
+int init() {
+	head = NULL;
+	DIR *d;
+	struct dirent *dir;
+	d = opendir("result");
+	if (d) {
+		while ((dir = readdir(d)) != NULL) {
+			if ((strcmp(dir->d_name, ".") != 0) && (strcmp(dir->d_name, "..") != 0)) {
+				cJSON *client = cJSON_CreateObject();
+				char ip[BUFF_SIZE] = "";
+				strcpy(ip, dir->d_name);
+				ip[strlen(ip) - 4] = '\0'; //get ip from filename
+
+				getDataFromFile(ip, client);
+				insertFirstPos(client);
+				// printf("%s\n", ip);
+			}
+		}
+		closedir(d);
+	}
+	return 0;
+}
+
+void freeList(Client_detail* head)
+{
+   Client_detail* tmp;
+
+   while (head != NULL)
+    {
+       tmp = head;
+       head = head->next;
+       free(tmp);
+    }
+
+}
 
 int setDatetime(ClientInfo* cli_info) {
 	time_t t = time(NULL);
@@ -95,6 +346,7 @@ int saveJsonToFile(ClientInfo* cli_info) {
         return 1;
     }
     fputs(out, fp);
+    fputs("\n", fp);
     free(out);
     fclose(fp);
     cli_info->json = cJSON_CreateObject();
@@ -218,45 +470,62 @@ int *makeMessage(int opcode, int length, int* payload)
 int sendTime(int sockfd, int *time_wait) {
 	int *mess;
 	int ret;
-	int len = (MAX_LENGTH + 2)*4;
+
 	mess = makeMessage(4, 4, time_wait);
-	ret = send(sockfd, mess, len, 0);
+	ret = send(sockfd, mess, BUFF_SIZE, 0);
 	free(mess);
-	if (ret <= 0){
-		return -1;
-	}
-	return 1;
+	return ret;
 }
 
-int resole(int menuno, int choose) {
-	switch (menuno) {
-		case 0:
-			
+int sendTimeWait() {
+	int sockfd;
+	int ret, t, i;
+	printf("Enter time wait: ");
+	while(1) {
+		if (scanf("%d", &t) > 0) {
+			time_wait = t;
 			break;
-		case 1:
-			break;
+		} else printf("Re-enter: ");
+	}
+
+	for (i = 0; i <= maxi; i++) {
+		if ( (sockfd = client[i]) < 0)
+			continue;
+		if (FD_ISSET(sockfd, &allset)) {
+			ret = sendTime(sockfd, &time_wait);
+			if (ret <= 0){
+				FD_CLR(sockfd, &allset);
+				close(sockfd);
+				client[i] = -1;
+			}
+		}
+		if (--nready <= 0)
+			break;		/* no more readable descriptors */
 	}
 }
 
 void *showMenu(void *arg) {
 	int ret, choose, i;
-	int *client = (int *) arg;
 	pthread_detach(pthread_self());
 	while(1) {
+		init();
 		printf("1. Change time ().\n2. Search by IP\n3. Search by date\nChoose: ");
 		scanf("%d", &choose);	
 		switch(choose) {
 			case 1: 
-				sendTime(client[i]);
+				sendTimeWait();
 				break;
 			case 2:
+				searchByIp();
 				break;
 			case 3:
+				searchTime();
 				break;
 		}
-		system("clear");
+		freeList(head);
 	}
 }
+
 
 
 int main(int argc, char *argv[])
@@ -266,14 +535,14 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int i, maxi, maxfd, listenfd, connfd, sockfd, choose, time, menuno = 0, len;
-	int nready, client[FD_SETSIZE];
+	int i, maxfd, listenfd, connfd, sockfd, choose;
+
 	ssize_t	ret;
 	int sendBuff[MAX_LENGTH+2];
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
 	ClientInfo Client[FD_SETSIZE];
-	int * mess, time_wait = 10, rcvBuff[MAX_LENGTH+2];
+	int * mess, rcvBuff[MAX_LENGTH+2];
 	int port = atoi(argv[1]);
 	pthread_t tid; 
 	//Step 1: Construct a TCP socket to listen connection request
@@ -317,25 +586,6 @@ int main(int argc, char *argv[])
 		if(nready < 0){
 			perror("\nError: ");
 			return 0;
-		}
-		if (FD_ISSET(STDIN_FILENO, &readfds)) {
-			scanf("%d", &time_wait);
-			for (i = 0; i <= maxi; i++) {	/* check all clients for data */
-				if ( (sockfd = client[i]) < 0)
-					continue;
-				if (FD_ISSET(sockfd, &allset)) {
-					ret = sendTime(sockfd, &time_wait);
-					if (ret <= 0){
-						FD_CLR(sockfd, &allset);
-						close(sockfd);
-						client[i] = -1;
-					}
-				}
-				if (--nready <= 0)
-					break;		/* no more readable descriptors */
-			}			
-		} else {
-			menuno = 100;
 		}
 		
 		if (FD_ISSET(listenfd, &readfds)) {	/* new client connection */
@@ -384,9 +634,8 @@ int main(int argc, char *argv[])
 				continue;
 			if (FD_ISSET(sockfd, &readfds)) {
 				//receives message from client
-				bzero(rcvBuff, MAX_LENGTH+2);
-				len = (MAX_LENGTH + 2) * 4;
-				ret = recv(sockfd, rcvBuff, len, MSG_WAITALL);
+				bzero(rcvBuff, BUFF_SIZE);
+				ret = recv(sockfd, rcvBuff, BUFF_SIZE, MSG_WAITALL);
 				if (ret <= 0){
 					FD_CLR(sockfd, &allset);
 					close(sockfd);

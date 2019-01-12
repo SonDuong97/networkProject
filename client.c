@@ -179,7 +179,6 @@ int rcvTime(int client_sock)
 	int len = (MAX_LENGTH + 2) * 4;
 	bytes_received = recv(client_sock, buff, len, MSG_DONTWAIT);
 	if (bytes_received <= 0) {
-		printf("Error: Connection closed.\n");
 		return -1;
 	}
 	parseMess(buff, &opcode, &length, payload);
@@ -220,7 +219,6 @@ int main(int argc, char *argv[]){
 	//Step 4: Communicate with server
 	while (1) {	
 		if (rcvTime(client_sock) != 0) {
-			fprintf(stderr, "Receiving is wrong.\n");
 		}
 
 		if (sendAll(client_sock) != 0) {
