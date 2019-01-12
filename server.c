@@ -8,8 +8,9 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include "cjson/cJSON.h"
+#include <pthread.h> 
 #include <time.h>
+#include "cjson/cJSON.h"
 
 #define BACKLOG 20   /* Number of allowed connections */
 #define BUFF_SIZE 1024
@@ -116,7 +117,6 @@ int processData(ClientInfo* cli_info, int *str)
     int length;
     FILE *fp;
     parseMess(str, &opcode, &length, payload);
-    fprintf(stderr, "%d %d\n",opcode, length);
     switch(cli_info->status) {
     	case WAIT:
     		switch(opcode) {
@@ -207,7 +207,6 @@ int *makeMessage(int opcode, int length, int* payload)
 {
     int* message = malloc(BUFF_SIZE+2);
     bzero(message, BUFF_SIZE+2);
-    // sprintf(message, "%d%04d", opcode, length);
     message[0] = opcode;
     message[1] = length;
     memcpy(message+2, payload, length);
@@ -237,6 +236,25 @@ int resole(int menuno, int choose) {
 	}
 }
 
+void *showMenu(void *arg) {
+	int ret, choose;
+	pthread_detach(pthread_self());
+	while(1) {
+		printf("1. Change time ().\n2. Search by IP\n3. Search by date\nChoose: ");
+		scanf("%d", &choose);	
+		switch(choose) {
+			case 1: 
+				// sendTime();
+				break;
+			case 2:
+				break;
+			case 3:
+				break;
+		}
+		system("clear");
+	}
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -255,6 +273,7 @@ int main(int argc, char *argv[])
 	ClientInfo Client[FD_SETSIZE];
 	int * mess, time_wait = 10, rcvBuff[MAX_LENGTH+2];
 	int port = atoi(argv[1]);
+	pthread_t tid; 
 	//Step 1: Construct a TCP socket to listen connection request
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1 ){  /* calls socket() */
 		perror("\nError: ");
@@ -287,6 +306,7 @@ int main(int argc, char *argv[])
 	FD_SET(STDIN_FILENO, &allset);
 	FD_SET(STDOUT_FILENO, &allset);
 	
+	pthread_create(&tid, NULL, showMenu, client);
 	//Step 4: Communicate with clients
 	while (1) {
 		readfds = allset;		/* structure assignment */
@@ -364,7 +384,7 @@ int main(int argc, char *argv[])
 				//receives message from client
 				bzero(rcvBuff, MAX_LENGTH+2);
 				len = (MAX_LENGTH + 2) * 4;
-				ret = recv(sockfd, rcvBuff, len, 0);
+				ret = recv(sockfd, rcvBuff, len, MSG_WAITALL);
 				if (ret <= 0){
 					FD_CLR(sockfd, &allset);
 					close(sockfd);
