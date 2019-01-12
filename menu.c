@@ -1,5 +1,9 @@
 #include <stdio.h>          /* These are the usual header files */
 
+int sendTimeWait() {
+	
+}
+
 int main() {
 	int ret;
 	int choose;

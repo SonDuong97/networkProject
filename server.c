@@ -43,6 +43,8 @@ typedef struct client_info {
 	cJSON *json;
 } ClientInfo;
 
+fd_set	readfds, allset, writefds;
+
 int setDatetime(ClientInfo* cli_info) {
 	time_t t = time(NULL);
 	struct tm tm = *localtime(&t);
@@ -237,14 +239,15 @@ int resole(int menuno, int choose) {
 }
 
 void *showMenu(void *arg) {
-	int ret, choose;
+	int ret, choose, i;
+	int *client = (int *) arg;
 	pthread_detach(pthread_self());
 	while(1) {
 		printf("1. Change time ().\n2. Search by IP\n3. Search by date\nChoose: ");
 		scanf("%d", &choose);	
 		switch(choose) {
 			case 1: 
-				// sendTime();
+				sendTime(client[i]);
 				break;
 			case 2:
 				break;
@@ -266,7 +269,6 @@ int main(int argc, char *argv[])
 	int i, maxi, maxfd, listenfd, connfd, sockfd, choose, time, menuno = 0, len;
 	int nready, client[FD_SETSIZE];
 	ssize_t	ret;
-	fd_set	readfds, allset, writefds;
 	int sendBuff[MAX_LENGTH+2];
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
