@@ -1,7 +1,7 @@
 all: build setup
 
 build:
-		gcc server.c -o server cjson/cJSON.o -g
+		gcc server.c -o server cjson/cJSON.o -g -pthread
 		gcc client.c -o client -g
 setup: 
 		sudo chmod +x setup.sh
