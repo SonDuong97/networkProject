@@ -18,7 +18,7 @@
 #define TMP_PROCESSING "log.txt"
 #define MAX_LENGTH 256
 
-int time_wait;
+int time_wait = 10;
 
 /*  int *makeMessage(int opcode, int length, int* payload)
     ---------------------------------------------------------------------------
