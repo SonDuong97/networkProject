@@ -117,6 +117,7 @@ int processData(ClientInfo* cli_info, int *str)
     int length;
     FILE *fp;
     parseMess(str, &opcode, &length, payload);
+    fprintf(stderr, "%d %d\n",opcode, length);
     switch(cli_info->status) {
     	case WAIT:
     		switch(opcode) {
@@ -227,6 +228,7 @@ int sendTime(int sockfd, int *time_wait) {
 	return 1;
 }
 
+<<<<<<< HEAD
 int getData(char *ip, cJSON *client) {
 	char path[BUFF_SIZE] = "";
 	sprintf(path, "result/%s.txt", ip);
@@ -277,6 +279,8 @@ int showMenu(int menuno, int* time_wait) {
 	}
 }
 
+=======
+>>>>>>> 7741360b587d2af768b373e0ca4b81274324eeeb
 int resole(int menuno, int choose) {
 	switch (menuno) {
 		case 0:
@@ -345,9 +349,6 @@ int main(int argc, char *argv[])
 		if(nready < 0){
 			perror("\nError: ");
 			return 0;
-		}
-		if (FD_ISSET(STDOUT_FILENO, &writefds)) {
-			showMenu(menuno, &time_wait);
 		}
 		if (FD_ISSET(STDIN_FILENO, &readfds)) {
 			scanf("%d", &time_wait);
