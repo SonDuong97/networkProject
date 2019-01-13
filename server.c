@@ -102,7 +102,7 @@ int searchByIp() {
 	cJSON *res_client = cJSON_CreateObject();
 	cJSON *results;
 	cJSON *result;
-	char command[BUFF_SIZE];
+	char command[BUFF_SIZE], c[BUFF_SIZE];
 	int i = 1, select = 0, back;
 	printf("Enter a ipv4: \n");
 	scanf("%s", ip);
@@ -126,7 +126,7 @@ int searchByIp() {
 		printf("%d. BACK\n", back);
 		printf("Enter a number: \n");
 		while (1) {
-			scanf("%d", &select);
+			scanf("%[^0-9]%d",c,&select);
 			if ((select > 0) && (select <= back)) {
 				break;
 			} else {
@@ -205,7 +205,7 @@ int searchTime() {
 	cJSON *results;
 	cJSON *result;
 	int i = 1, select, back;
-	char c;
+	char c, str[BUFF_SIZE];
 	printf("Enter a datetime(yyyy-mm-dd hh:mm:ss): ");
 	scanf("%c%[^\n]s", &c, datetime);
 
@@ -222,7 +222,7 @@ int searchTime() {
 			printf("%d. BACK\n", back);
 			printf("Enter a number: \n");
 			while (1) {
-				scanf("%d", &select);
+				scanf("%[^0-9]%d",str,&select);
 				if ((select > 0) && (select <= back)) {
 					break;
 				} else {
@@ -491,9 +491,10 @@ int sendTime(int sockfd, int *time_wait) {
 int sendTimeWait() {
 	int sockfd;
 	int ret, t, i;
+	char str[BUFF_SIZE];
 	printf("Enter time wait: ");
 	while(1) {
-		if (scanf("%d", &t) > 0) {
+		if (scanf("%[^0-9]%d",str,&t) > 0) {
 			time_wait = t;
 			break;
 		} else printf("Re-enter: ");
