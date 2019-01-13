@@ -14,7 +14,7 @@
 #include "cjson/cJSON.h"
 
 #define BACKLOG 20   /* Number of allowed connections */
-#define BUFF_SIZE 1032
+#define BUFF_SIZE 1024
 #define NAME_SIZE 256
 #define MAX_LENGTH 256
 
@@ -355,18 +355,25 @@ int saveJsonToFile(ClientInfo* cli_info) {
 
 
 
-int parseMess(int *mess, int *opcode, int *length, int *payload) {
-    *opcode = mess[0];
-    *length = mess[1];
-    memcpy(payload, mess+2, *length);
+int parseMess(char *str, int *opcode, int *length, char *payload) {
+    char temp_str[5];
+    memcpy(temp_str, str, 1);
+    temp_str[1] = '\0';
+    *opcode = atoi(temp_str);
+
+    memcpy(temp_str, str+1, 4);
+    temp_str[4] = '\0';
+    *length = atoi(temp_str);
+
+    memcpy(payload, str+5, *length);
     return 0;
 }
 
 // Processing the received message(str) and save to file
 // Return opcode_type and key
-int processData(ClientInfo* cli_info, int *str)
+int processData(ClientInfo* cli_info, char *str)
 {
-    int payload[MAX_LENGTH];
+    char payload[BUFF_SIZE];
     int opcode;
     int length;
     FILE *fp;
@@ -457,22 +464,22 @@ int processData(ClientInfo* cli_info, int *str)
 }
 
 // Make message from opcode, length, payload to send to server
-int *makeMessage(int opcode, int length, int* payload)
+char *makeMessage(int opcode, int length, char* payload)
 {
-    int* message = malloc(BUFF_SIZE+2);
-    bzero(message, BUFF_SIZE+2);
-    message[0] = opcode;
-    message[1] = length;
-    memcpy(message+2, payload, length);
+    char* message = malloc(BUFF_SIZE+5);
+    bzero(message, BUFF_SIZE+5);
+    sprintf(message, "%d%04d", opcode, length);
+    memcpy(message+5, payload, length);
     return message; 
 }
 
 int sendTime(int sockfd, int *time_wait) {
-	int *mess;
+	char *mess;
 	int ret;
-
-	mess = makeMessage(4, 4, time_wait);
-	ret = send(sockfd, mess, BUFF_SIZE, 0);
+	char timeWait[5];
+	sprintf(timeWait, "%d", *time_wait);
+	mess = makeMessage(4, strlen(timeWait), timeWait);
+	ret = send(sockfd, mess, BUFF_SIZE + 5, 0);
 	free(mess);
 	return ret;
 }
@@ -538,11 +545,10 @@ int main(int argc, char *argv[])
 	int i, maxfd, listenfd, connfd, sockfd, choose;
 
 	ssize_t	ret;
-	int sendBuff[MAX_LENGTH+2];
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
 	ClientInfo Client[FD_SETSIZE];
-	int * mess, rcvBuff[MAX_LENGTH+2];
+	char * mess, rcvBuff[BUFF_SIZE + 5];
 	int port = atoi(argv[1]);
 	pthread_t tid; 
 	//Step 1: Construct a TCP socket to listen connection request
@@ -634,8 +640,8 @@ int main(int argc, char *argv[])
 				continue;
 			if (FD_ISSET(sockfd, &readfds)) {
 				//receives message from client
-				bzero(rcvBuff, BUFF_SIZE);
-				ret = recv(sockfd, rcvBuff, BUFF_SIZE, MSG_WAITALL);
+				bzero(rcvBuff, BUFF_SIZE + 5);
+				ret = recv(sockfd, rcvBuff, BUFF_SIZE + 5, MSG_WAITALL);
 				if (ret <= 0){
 					FD_CLR(sockfd, &allset);
 					close(sockfd);
