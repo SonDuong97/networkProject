@@ -127,7 +127,7 @@ int searchByIp() {
 		printf("Enter a number: \n");
 		while (1) {
 			scanf("%d", &select);
-			if (select > 0) {
+			if ((select > 0) && (select <= back)) {
 				break;
 			} else {
 				printf("Wrong number. Enter again: \n");
@@ -150,6 +150,8 @@ int searchByIp() {
 			sprintf(command, "xdg-open %s", infomation->valuestring);
 			system(command);
 			sprintf(command, "xdg-open %s", process_info->valuestring);
+			system(command);
+			sprintf(command, "xdg-open %s", keyboard_mouse_operations->valuestring);
 			system(command);
 			sprintf(command, "xdg-open %s", image->valuestring);
 			system(command);
@@ -221,7 +223,7 @@ int searchTime() {
 			printf("Enter a number: \n");
 			while (1) {
 				scanf("%d", &select);
-				if (select > 0) {
+				if ((select > 0) && (select <= back)) {
 					break;
 				} else {
 					printf("Wrong number. Enter again: \n");
@@ -246,6 +248,8 @@ int searchTime() {
 				sprintf(command, "xdg-open %s", infomation->valuestring);
 				system(command);
 				sprintf(command, "xdg-open %s", process_info->valuestring);
+				system(command);
+				sprintf(command, "xdg-open %s", keyboard_mouse_operations->valuestring);
 				system(command);
 				sprintf(command, "xdg-open %s", image->valuestring);
 				system(command);
