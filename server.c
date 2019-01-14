@@ -316,38 +316,58 @@ int setDatetime(ClientInfo* cli_info) {
     return 0;
 }
 
+
+/*	int setPath(ClientInfo* cli_info, char *key,char* extension, char* folder, char* path)
+	---------------------------------------------------------------------------
+	TODO	: > Set the path of the client infomation file and add to JSON object.
+	---------------------------------------------------------------------------
+	INPUT	: - ClientInfo *cli_info 	[contain ip address and JSON pointer]
+	OUTPUT	: + return 0				[Save sucess]
+			  + return -1				[JSON pointer is NULL]
+			  + return -2				[Can't pen saving file]
+*/
 int setPath(ClientInfo* cli_info, char *key,char* extension, char* folder, char* path) {
 	char path_file[2024];
 
 	sprintf(path_file, "%s/%s[%ld].%s", folder , cli_info->ip_address, (unsigned long)time(NULL), extension);
 
     if ((rename(path, path_file)) != 0) {
-		fprintf(stderr, "Can't rename image file.\n");
+		fprintf(stderr, "Can't rename file.\n");
 		return -1;
 	}
 
     if (cJSON_AddStringToObject(cli_info->json, key, path_file) == NULL)
     {
-        return -1;
+        return -2;
     }
 
     return 0;
 }
 
+
+/*	int saveJsonToFile(ClientInfo* cli_info)
+	---------------------------------------------------------------------------
+	TODO	: > Save Json in the file with name is IPv4 address.
+	---------------------------------------------------------------------------
+	INPUT	: - ClientInfo *cli_info 	[contain ip address and JSON pointer]
+	OUTPUT	: + return 0				[Save sucess]
+			  + return -1				[JSON pointer is NULL]
+			  + return -2				[Can't pen saving file]
+*/
 int saveJsonToFile(ClientInfo* cli_info) {
 	char *out;
 	FILE *fp;
 	out = cJSON_Print(cli_info->json);
     if (out == NULL) {
         fprintf(stderr, "Failed to print computer.\n");
-        return 1;
+        return -1;
     }
 
     cJSON_Delete(cli_info->json);
 	fp = fopen(cli_info->result,"a+");
     if (fp == NULL) {
     	fprintf(stderr, "Failed to open file.\n");
-        return 1;
+        return -2;
     }
     fputs(out, fp);
     fputs("\n", fp);
@@ -358,18 +378,27 @@ int saveJsonToFile(ClientInfo* cli_info) {
 }
 
 
-
-int parseMess(char *str, int *opcode, int *length, char *payload) {
+/*  int parseMess(char *mess, int *opcode, int *length, char *payload)
+    ---------------------------------------------------------------------------
+    TODO   : > parse a message and return opcode, length, payload 
+    ---------------------------------------------------------------------------
+    INPUT  : - char *mess		[message will be parse]
+    		 - int *opcode 		[Save opcode]
+    		 - int *length 		[Save length]
+    		 - char *payload	[Save payload]
+    OUTPUT : + return 0			[Parse success]
+*/
+int parseMess(char *mess, int *opcode, int *length, char *payload) {
     char temp_str[5];
-    memcpy(temp_str, str, 1);
+    memcpy(temp_str, mess, 1);
     temp_str[1] = '\0';
     *opcode = atoi(temp_str);
 
-    memcpy(temp_str, str+1, 4);
+    memcpy(temp_str, mess+1, 4);
     temp_str[4] = '\0';
     *length = atoi(temp_str);
 
-    memcpy(payload, str+5, *length);
+    memcpy(payload, mess+5, *length);
     return 0;
 }
 
@@ -492,10 +521,11 @@ int sendTimeWait() {
 	int sockfd;
 	int ret, t, i;
 	char str[BUFF_SIZE];
-	printf("Enter time wait: ");
+	printf("Enter time wait (s): ");
 	while(1) {
 		if (scanf("%[^0-9]%d",str,&t) > 0) {
 			time_wait = t;
+			printf("Successful change!\n");
 			break;
 		} else printf("Re-enter: ");
 	}
@@ -521,7 +551,7 @@ void *showMenu(void *arg) {
 	pthread_detach(pthread_self());
 	while(1) {
 		init();
-		printf("1. Change time ().\n2. Search by IP\n3. Search by date\nChoose: ");
+		printf("1. Change time (Current: %ds).\n2. Search by IP\n3. Search by date\nChoose: ", time_wait);
 		scanf("%d", &choose);	
 		switch(choose) {
 			case 1: 

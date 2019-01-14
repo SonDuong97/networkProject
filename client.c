@@ -20,16 +20,15 @@
 
 int time_wait = 10;
 
-/*  int *makeMessage(int opcode, int length, int* payload)
+/*  char *makeMessage(int opcode, int length, char* payload)
     ---------------------------------------------------------------------------
     TODO   : > Make a message to send  
     ---------------------------------------------------------------------------
     INPUT  : - int opcode       [Opcode of message]
     		 - int length       [Length of message]
-    		 - int *payload		[Pointer of payload]
+    		 - char *payload		[Pointer of payload]
     OUTPUT : + return message         [return a message]
 */
-// Make message from opcode, length, payload to send to server
 char *makeMessage(int opcode, int length, char* payload)
 {
     char* message = malloc(BUFF_SIZE+5);
@@ -101,6 +100,8 @@ int sendFile(int opcode, char* filename, int client_sock)
 	remove(filename);
 	return 0;	
 }
+
+
 /*  int sendAll(int client_sock)
     ---------------------------------------------------------------------------
     TODO   : > Run some command to make file data and send them to server 
@@ -109,7 +110,7 @@ int sendFile(int opcode, char* filename, int client_sock)
     OUTPUT : + return -1       	[Failed to send file mouse and keyboard log]
     		 + return -2		[Failed to send file infomation]
 			 + return -3		[Failed to send file processing]
-			 + return -4			[Failed to send file image]
+			 + return -4		[Failed to send file image]
 			 + return 0			[Send all file success]
 */
 int sendAll(int client_sock)
@@ -143,27 +144,28 @@ int sendAll(int client_sock)
     return 0;
 }
 
-/*  int parseMess(int *mess, int *opcode, int *length, int *payload)
+
+/*  int parseMess(char *mess, int *opcode, int *length, char *payload)
     ---------------------------------------------------------------------------
     TODO   : > parse a message and return opcode, length, payload 
     ---------------------------------------------------------------------------
-    INPUT  : - int *mess		[message will be parse]
+    INPUT  : - char *mess		[message will be parse]
     		 - int *opcode 		[Save opcode]
     		 - int *length 		[Save length]
-    		 - int *payload		[Save payload]
+    		 - char *payload	[Save payload]
     OUTPUT : + return 0			[Parse success]
 */
-int parseMess(char *str, int *opcode, int *length, char *payload) {
+int parseMess(char *mess, int *opcode, int *length, char *payload) {
     char temp_str[5];
-    memcpy(temp_str, str, 1);
+    memcpy(temp_str, mess, 1);
     temp_str[1] = '\0';
     *opcode = atoi(temp_str);
 
-    memcpy(temp_str, str+1, 4);
+    memcpy(temp_str, mess+1, 4);
     temp_str[4] = '\0';
     *length = atoi(temp_str);
 
-    memcpy(payload, str+5, *length);
+    memcpy(payload, mess+5, *length);
     return 0;
 }
 
