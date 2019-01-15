@@ -7,6 +7,5 @@ setup:
 		sudo chmod +x setup.sh
 		./setup.sh
 
-
 clean:
-		rm -rf server client images info logs processing result
+		rm -rf server client images info logs processing result event.txt

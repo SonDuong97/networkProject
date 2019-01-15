@@ -14,9 +14,8 @@
 #include "cjson/cJSON.h"
 
 #define BACKLOG 20   /* Number of allowed connections */
-#define BUFF_SIZE 1032
+#define BUFF_SIZE 1024
 #define NAME_SIZE 256
-#define MAX_LENGTH 256
 
 #define FOLDER_INFO "info"
 #define FOLDER_PROCESSING "processing"
@@ -25,14 +24,15 @@
 #define FOLDER_LOG "logs"
 #define WAIT 0
 #define FINISH 1
-// #define TMP_INFO "info.txt"
-// #define TMP_IMAGE "image.png"
-// #define TMP_OPERATION "event.txt"
 #define KEY_INFO "infomation"
 #define KEY_PROCESSING "process_info"
 #define KEY_KBMS "keyboard_mouse_operations"
 #define KEY_IMAGE "image"
 
+
+/*
+This struct contain temporary infomation client.
+*/
 typedef struct client_info {
 	int status;
 	char ip_address[BUFF_SIZE];
@@ -47,6 +47,11 @@ typedef struct client_info {
 
 fd_set	readfds, allset, writefds;
 int nready, client[FD_SETSIZE], maxi, time_wait = 10;
+
+
+/*	
+This struct contain all client infomation.
+*/
 typedef struct client_detail {
 	cJSON *value;
 	struct client_detail *next;
@@ -54,6 +59,14 @@ typedef struct client_detail {
 
 Client_detail *head = NULL;
 
+
+/*	int insertFirstPos(cJSON *client)
+	---------------------------------------------------------------------------
+	TODO	: > Insert node to first position of linked-list
+	---------------------------------------------------------------------------
+	INPUT	: - cJSON *client			[Node need insert]
+	OUTPUT	: + return 0				[Insert success]
+*/
 int insertFirstPos(cJSON *client) {
 	Client_detail *temp = (Client_detail *)malloc(sizeof(Client_detail));
 	temp->value = client;
@@ -63,6 +76,16 @@ int insertFirstPos(cJSON *client) {
 	return 0;
 }
 
+
+/*	int getDataFromFile(char *ip, cJSON *client)
+	---------------------------------------------------------------------------
+	TODO	: > Get JSON data from file with name is IP'client.
+	---------------------------------------------------------------------------
+	INPUT	: - char *ip				[IP address]
+			  - cJSON *client			[Result of searching infomation client]
+	OUTPUT	: + return 0				[Have result]
+			  + return -1				[No result]
+*/
 int getDataFromFile(char *ip, cJSON *client) {
 	char path[BUFF_SIZE] = "";
 	sprintf(path, "result/%s.txt", ip);
@@ -72,10 +95,8 @@ int getDataFromFile(char *ip, cJSON *client) {
 	int curr = 0;
 	cJSON *results = NULL;
 	results = cJSON_AddArrayToObject(client, "results");
-	if (cJSON_AddStringToObject(client, "ip", ip) == NULL)
-    {
-        printf("k them dc.\n");
-    }
+	cJSON_AddStringToObject(client, "ip", ip);
+
 	if (fin == NULL) {
 		return -1;
 	}
@@ -97,23 +118,28 @@ int getDataFromFile(char *ip, cJSON *client) {
 	return 0;
 }
 
+
+/*	int searchByIp()
+	---------------------------------------------------------------------------
+	TODO	: > Search client infomation by IPv4
+	---------------------------------------------------------------------------
+	OUTPUT	: + return 0				[Have result]
+			  + return -1				[IP doesn't exist in server]
+*/
 int searchByIp() {
 	char ip[BUFF_SIZE];
 	cJSON *res_client = cJSON_CreateObject();
 	cJSON *results;
 	cJSON *result;
-	char command[BUFF_SIZE];
+	char command[BUFF_SIZE], c[BUFF_SIZE];
 	int i = 1, select = 0, back;
 	printf("Enter a ipv4: \n");
 	scanf("%s", ip);
 	if (getDataFromFile(ip, res_client) == -1) {
-		printf("Ip khong ton tai.\n");
+		printf("IP not found.\n");
 		return -1;
 	}
-	// char *str = cJSON_Print(res_client);
-	// printf("%s\n", str);
 
-	// ip = cJSON_GetObjectItemCaseSensitive(res_client, "ip");
 	while (1) {
 		i = 1;
 		results = cJSON_GetObjectItemCaseSensitive(res_client, "results");
@@ -126,8 +152,8 @@ int searchByIp() {
 		printf("%d. BACK\n", back);
 		printf("Enter a number: \n");
 		while (1) {
-			scanf("%d", &select);
-			if (select > 0) {
+			scanf("%[^0-9]%d",c,&select);
+			if ((select > 0) && (select <= back)) {
 				break;
 			} else {
 				printf("Wrong number. Enter again: \n");
@@ -151,6 +177,8 @@ int searchByIp() {
 			system(command);
 			sprintf(command, "xdg-open %s", process_info->valuestring);
 			system(command);
+			sprintf(command, "xdg-open %s", keyboard_mouse_operations->valuestring);
+			system(command);
 			sprintf(command, "xdg-open %s", image->valuestring);
 			system(command);
 			break;
@@ -161,6 +189,16 @@ int searchByIp() {
 	return 0;
 }
 
+
+/*	int searchByTime(char *time, cJSON *arr_res)
+	---------------------------------------------------------------------------
+	TODO	: > Search client infomation by datetime
+	---------------------------------------------------------------------------
+	INPUT	: - char *time 				[Datetime]
+			  - cJSON *arr_res			[Array of searching results]
+	OUTPUT	: + return 0				[No result]
+			  + return 1				[Have result]
+*/
 int searchByTime(char *time, cJSON *arr_res) {
 	Client_detail *temp = head;
 	cJSON *result = NULL;
@@ -197,13 +235,19 @@ int searchByTime(char *time, cJSON *arr_res) {
 	return flag > 0;
 }
 
-int searchTime() {
+
+/*	int searchTime()
+	---------------------------------------------------------------------------
+	TODO	: > Input a datetime and search client infomation by datetime.
+	---------------------------------------------------------------------------
+*/
+void searchTime() {
 	char datetime[NAME_SIZE], command[NAME_SIZE];
 	cJSON *arr_res = cJSON_CreateObject();
 	cJSON *results;
 	cJSON *result;
 	int i = 1, select, back;
-	char c;
+	char c, str[BUFF_SIZE];
 	printf("Enter a datetime(yyyy-mm-dd hh:mm:ss): ");
 	scanf("%c%[^\n]s", &c, datetime);
 
@@ -220,8 +264,8 @@ int searchTime() {
 			printf("%d. BACK\n", back);
 			printf("Enter a number: \n");
 			while (1) {
-				scanf("%d", &select);
-				if (select > 0) {
+				scanf("%[^0-9]%d",str,&select);
+				if ((select > 0) && (select <= back)) {
 					break;
 				} else {
 					printf("Wrong number. Enter again: \n");
@@ -247,6 +291,8 @@ int searchTime() {
 				system(command);
 				sprintf(command, "xdg-open %s", process_info->valuestring);
 				system(command);
+				sprintf(command, "xdg-open %s", keyboard_mouse_operations->valuestring);
+				system(command);
 				sprintf(command, "xdg-open %s", image->valuestring);
 				system(command);
 				break;
@@ -256,10 +302,16 @@ int searchTime() {
 	} else {
 		printf("No result.\n");
 	}
-
-	return 0;
 }
 
+
+/*	int init()
+	---------------------------------------------------------------------------
+	TODO	: > Initialize linked-list of JSON object. This JSON object contain
+				all infomation client and sending datetime. 
+	---------------------------------------------------------------------------
+	OUTPUT	: + return 0				[Initialize sucess]
+*/
 int init() {
 	head = NULL;
 	DIR *d;
@@ -275,7 +327,6 @@ int init() {
 
 				getDataFromFile(ip, client);
 				insertFirstPos(client);
-				// printf("%s\n", ip);
 			}
 		}
 		closedir(d);
@@ -283,6 +334,13 @@ int init() {
 	return 0;
 }
 
+
+/*	void freeList(Client_detail* head)
+	---------------------------------------------------------------------------
+	TODO	: > Free linked list
+	---------------------------------------------------------------------------
+	INPUT	: - Client_detail* head 	[First address pointer of linked-list]
+*/
 void freeList(Client_detail* head)
 {
    Client_detail* tmp;
@@ -296,6 +354,15 @@ void freeList(Client_detail* head)
 
 }
 
+
+/*	int setDatetime(ClientInfo* cli_info)
+	---------------------------------------------------------------------------
+	TODO	: > Set datetime property to JSON object.
+	---------------------------------------------------------------------------
+	INPUT	: - ClientInfo *cli_info 	[Contain ip address and JSON pointer]
+	OUTPUT	: + return 0				[Set sucess]
+			  + return -1				[Can't set datetime property to JSON object]
+*/
 int setDatetime(ClientInfo* cli_info) {
 	time_t t = time(NULL);
 	struct tm tm = *localtime(&t);
@@ -312,38 +379,58 @@ int setDatetime(ClientInfo* cli_info) {
     return 0;
 }
 
+
+/*	int setPath(ClientInfo* cli_info, char *key,char* extension, char* folder, char* path)
+	---------------------------------------------------------------------------
+	TODO	: > Set the path of the client infomation file and add to JSON object.
+	---------------------------------------------------------------------------
+	INPUT	: - ClientInfo *cli_info 	[Contain ip address and JSON pointer]
+	OUTPUT	: + return 0				[Save sucess]
+			  + return -1				[JSON pointer is NULL]
+			  + return -2				[Can't pen saving file]
+*/
 int setPath(ClientInfo* cli_info, char *key,char* extension, char* folder, char* path) {
 	char path_file[2024];
 
 	sprintf(path_file, "%s/%s[%ld].%s", folder , cli_info->ip_address, (unsigned long)time(NULL), extension);
 
     if ((rename(path, path_file)) != 0) {
-		fprintf(stderr, "Can't rename image file.\n");
+		fprintf(stderr, "Can't rename file.\n");
 		return -1;
 	}
 
     if (cJSON_AddStringToObject(cli_info->json, key, path_file) == NULL)
     {
-        return -1;
+        return -2;
     }
 
     return 0;
 }
 
+
+/*	int saveJsonToFile(ClientInfo* cli_info)
+	---------------------------------------------------------------------------
+	TODO	: > Save Json in the file with name is IPv4 address.
+	---------------------------------------------------------------------------
+	INPUT	: - ClientInfo *cli_info 	[Contain ip address and JSON pointer]
+	OUTPUT	: + return 0				[Save sucess]
+			  + return -1				[JSON pointer is NULL]
+			  + return -2				[Can't pen saving file]
+*/
 int saveJsonToFile(ClientInfo* cli_info) {
 	char *out;
 	FILE *fp;
 	out = cJSON_Print(cli_info->json);
     if (out == NULL) {
         fprintf(stderr, "Failed to print computer.\n");
-        return 1;
+        return -1;
     }
 
     cJSON_Delete(cli_info->json);
 	fp = fopen(cli_info->result,"a+");
     if (fp == NULL) {
     	fprintf(stderr, "Failed to open file.\n");
-        return 1;
+        return -2;
     }
     fputs(out, fp);
     fputs("\n", fp);
@@ -354,23 +441,51 @@ int saveJsonToFile(ClientInfo* cli_info) {
 }
 
 
+/*  int parseMess(char *mess, int *opcode, int *length, char *payload)
+    ---------------------------------------------------------------------------
+    TODO   : > parse a message and return opcode, length, payload 
+    ---------------------------------------------------------------------------
+    INPUT  : - char *mess		[Message will be parse]
+    		 - int *opcode 		[Save opcode]
+    		 - int *length 		[Save length]
+    		 - char *payload	[Save payload]
+    OUTPUT : + return 0			[Parse success]
+*/
+int parseMess(char *mess, int *opcode, int *length, char *payload) {
+    char temp_str[5];
+    memcpy(temp_str, mess, 1);
+    temp_str[1] = '\0';
+    *opcode = atoi(temp_str);
 
-int parseMess(int *mess, int *opcode, int *length, int *payload) {
-    *opcode = mess[0];
-    *length = mess[1];
-    memcpy(payload, mess+2, *length);
+    memcpy(temp_str, mess+1, 4);
+    temp_str[4] = '\0';
+    *length = atoi(temp_str);
+
+    memcpy(payload, mess+5, *length);
     return 0;
 }
 
-// Processing the received message(str) and save to file
-// Return opcode_type and key
-int processData(ClientInfo* cli_info, int *str)
+
+/*  int parseMess(char *mess, int *opcode, int *length, char *payload)
+    ---------------------------------------------------------------------------
+    TODO   : > Processing the received message(str) and save to file 
+    ---------------------------------------------------------------------------
+    INPUT  : - ClientInfo* cli_info		[Current IP'client]
+    		 - char *mess 				[Message recive from client]
+    OUTPUT : + return 0					[Process success]
+    		 + return -1				[Can't open file]
+    		 + return -2				[Can't set path of result file]
+    		 + return -3				[Can't add datetime property to JSON object]
+    		 + return -4				[Can't save JSON to file]
+    		 + return -5 				[Client error]
+*/
+int processData(ClientInfo* cli_info, char *mess)
 {
-    int payload[MAX_LENGTH];
+    char payload[BUFF_SIZE];
     int opcode;
     int length;
     FILE *fp;
-    parseMess(str, &opcode, &length, payload);
+    parseMess(mess, &opcode, &length, payload);
     switch(cli_info->status) {
     	case WAIT:
     		switch(opcode) {
@@ -378,14 +493,14 @@ int processData(ClientInfo* cli_info, int *str)
         			if (length != 0) {
         				if ((fp = fopen(cli_info->tmp_info, "a+")) == NULL) {
 							printf("Can't open file client's infomation.\n");
-							return 1;
+							return -1;
 						}
 						fwrite(payload, 1, length, fp);
 			            fclose(fp);
         			} else {
         				if (setPath(cli_info, KEY_INFO, "txt", FOLDER_INFO, cli_info->tmp_info) != 0) {
         					fprintf(stderr, "Setting info is wrong.\n");
-        					return 1;
+        					return -2;
         				}
         			}
 		            break;
@@ -394,14 +509,14 @@ int processData(ClientInfo* cli_info, int *str)
         			if (length != 0) {
         				if ((fp = fopen(cli_info->tmp_processing, "a+")) == NULL) {
 							printf("Can't open file client's infomation.\n");
-							return 1;
+							return -1;
 						}
 						fwrite(payload, 1, length, fp);
 			            fclose(fp);
         			} else {
         				if (setPath(cli_info, KEY_PROCESSING, "txt", FOLDER_PROCESSING, cli_info->tmp_processing) != 0) {
         					fprintf(stderr, "Setting info is wrong.\n");
-        					return 1;
+        					return -2;
         				}
         			}
 
@@ -411,14 +526,14 @@ int processData(ClientInfo* cli_info, int *str)
         			if (length != 0) {
 		        		if ((fp = fopen(cli_info->tmp_operation, "a+")) == NULL) {
 		        			printf("Can't open file client's mouse and keyboard event\n");
-							return 1;
+							return -1;
 		        		}
 		        		fwrite(payload, 1, length, fp);
 		        		fclose(fp);
 		        	} else {
 		        		if (setPath(cli_info, KEY_KBMS, "txt", FOLDER_LOG, cli_info->tmp_operation) != 0) {
         					fprintf(stderr, "Setting info is wrong.\n");
-        					return 1;
+        					return -2;
         				}
 		        	}
 		        	break;
@@ -427,27 +542,29 @@ int processData(ClientInfo* cli_info, int *str)
 		        	if (length != 0) {
 		        		if ((fp = fopen(cli_info->tmp_image, "ab+")) == NULL) {
 		        			printf("Can't open file client's image.\n");
-							return 1;
+							return -1;
 		        		}
 		        		fwrite(payload, 1, length, fp);
 		        		fclose(fp);
 		        	} else {
 		        		if (setPath(cli_info, KEY_IMAGE, "png", FOLDER_IMG, cli_info->tmp_image) != 0) {
         					fprintf(stderr, "Setting info is wrong.\n");
-        					return 1;
+        					return -2;
         				}
 
         				if (setDatetime(cli_info) != 0) {
         					fprintf(stderr, "Can't set datetime.\n");
-		        			return 1;
+		        			return -3;
         				}
 
 		        		if (saveJsonToFile(cli_info) != 0) {
 		        			fprintf(stderr, "Can't save json.\n");
-		        			return 1;
+		        			return -4;
 		        		}
 		        	}
 		        	break;
+		        case 5:
+		        	return -5;
 	        }
     		break;
     	case FINISH:
@@ -456,34 +573,59 @@ int processData(ClientInfo* cli_info, int *str)
     return 0;
 }
 
-// Make message from opcode, length, payload to send to server
-int *makeMessage(int opcode, int length, int* payload)
+
+/*  char *makeMessage(int opcode, int length, char* payload)
+    ---------------------------------------------------------------------------
+    TODO   : > Make a message to send  
+    ---------------------------------------------------------------------------
+    INPUT  : - int opcode       [Opcode of message]
+    		 - int length       [Length of message]
+    		 - char *payload		[Pointer of payload]
+    OUTPUT : + return message         [return a message]
+*/
+char *makeMessage(int opcode, int length, char* payload)
 {
-    int* message = malloc(BUFF_SIZE+2);
-    bzero(message, BUFF_SIZE+2);
-    message[0] = opcode;
-    message[1] = length;
-    memcpy(message+2, payload, length);
+    char* message = malloc(BUFF_SIZE+5);
+    bzero(message, BUFF_SIZE+5);
+    sprintf(message, "%d%04d", opcode, length);
+    memcpy(message+5, payload, length);
     return message; 
 }
 
+/*  int sendTime(int sockfd, int *time_wait)
+    ---------------------------------------------------------------------------
+    TODO   : > Send time wait to client.
+    ---------------------------------------------------------------------------
+    INPUT  : - int sockfd       	[Socket file descriptor of client]
+    		 - int *time_wait      	[Poiter of time wait]
+    OUTPUT : + return ret        	[return bytes sent]
+*/
 int sendTime(int sockfd, int *time_wait) {
-	int *mess;
+	char *mess;
 	int ret;
-
-	mess = makeMessage(4, 4, time_wait);
-	ret = send(sockfd, mess, BUFF_SIZE, 0);
+	char timeWait[5];
+	sprintf(timeWait, "%d", *time_wait);
+	mess = makeMessage(4, strlen(timeWait), timeWait);
+	ret = send(sockfd, mess, BUFF_SIZE + 5, 0);
 	free(mess);
 	return ret;
 }
 
-int sendTimeWait() {
+
+/*  void sendTimeWait()
+    ---------------------------------------------------------------------------
+    TODO   : > Send time wait to all client.
+    ---------------------------------------------------------------------------
+*/
+void sendTimeWait() {
 	int sockfd;
 	int ret, t, i;
-	printf("Enter time wait: ");
+	char str[BUFF_SIZE];
+	printf("Enter time wait (s): ");
 	while(1) {
-		if (scanf("%d", &t) > 0) {
+		if (scanf("%[^0-9]%d",str,&t) > 0) {
 			time_wait = t;
+			printf("Successful change!\n");
 			break;
 		} else printf("Re-enter: ");
 	}
@@ -504,12 +646,18 @@ int sendTimeWait() {
 	}
 }
 
+
+/*  void *showMenu(void *arg)
+    ---------------------------------------------------------------------------
+    TODO   : > Show menu
+    ---------------------------------------------------------------------------
+*/
 void *showMenu(void *arg) {
 	int ret, choose, i;
 	pthread_detach(pthread_self());
 	while(1) {
 		init();
-		printf("1. Change time ().\n2. Search by IP\n3. Search by date\nChoose: ");
+		printf("1. Change time (Current: %ds).\n2. Search by IP\n3. Search by date\nChoose: ", time_wait);
 		scanf("%d", &choose);	
 		switch(choose) {
 			case 1: 
@@ -535,14 +683,13 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int i, maxfd, listenfd, connfd, sockfd, choose;
+	int i, maxfd, listenfd, connfd, sockfd, choose, process_status;
 
 	ssize_t	ret;
-	int sendBuff[MAX_LENGTH+2];
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
 	ClientInfo Client[FD_SETSIZE];
-	int * mess, rcvBuff[MAX_LENGTH+2];
+	char * mess, rcvBuff[BUFF_SIZE + 5];
 	int port = atoi(argv[1]);
 	pthread_t tid; 
 	//Step 1: Construct a TCP socket to listen connection request
@@ -593,7 +740,6 @@ int main(int argc, char *argv[])
 			if((connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) < 0)
 				perror("\nError: ");
 			else{
-				printf("You got a connection from %s\n", inet_ntoa(cliaddr.sin_addr)); /* prints client's IP */
 				for (i = 0; i < FD_SETSIZE; i++)
 					if (client[i] < 0) {
 						client[i] = connfd;	/* save descriptor */
@@ -634,14 +780,21 @@ int main(int argc, char *argv[])
 				continue;
 			if (FD_ISSET(sockfd, &readfds)) {
 				//receives message from client
-				bzero(rcvBuff, BUFF_SIZE);
-				ret = recv(sockfd, rcvBuff, BUFF_SIZE, MSG_WAITALL);
+				bzero(rcvBuff, BUFF_SIZE + 5);
+				ret = recv(sockfd, rcvBuff, BUFF_SIZE + 5, MSG_WAITALL);
 				if (ret <= 0){
 					FD_CLR(sockfd, &allset);
 					close(sockfd);
 					client[i] = -1;
 				} else {
-					if (processData(&Client[i], rcvBuff) == 0) {
+					process_status = processData(&Client[i], rcvBuff);
+					if (process_status == -5) {
+						FD_CLR(sockfd, &allset);
+						close(sockfd);
+						client[i] = -1;
+					} else 
+					if (process_status < 0) {
+						goto CLOSE;
 					}
 				}
 			}
@@ -649,6 +802,19 @@ int main(int argc, char *argv[])
 				break;		/* no more readable descriptors */
 		}
 	}
-	
+	CLOSE:
+	for (i = 0; i <= maxi; i++) {
+		if ( (sockfd = client[i]) < 0)
+			continue;
+		if (FD_ISSET(sockfd, &allset)) {
+			FD_CLR(sockfd, &allset);
+			close(sockfd);
+			client[i] = -1;
+		}
+		if (--nready <= 0)
+			break;		
+	}
+	system("clear");
+	printf("Server error. Closed!");
 	return 0;
 }
