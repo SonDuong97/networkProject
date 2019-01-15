@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include "cjson/cJSON.h"
+#include "message.h"
 
 #define BUFF_SIZE 1024
 #define TMP_INFO "info.txt"
@@ -18,24 +19,6 @@
 #define MAX_LENGTH 256
 
 int time_wait = 10;
-
-/*  char *makeMessage(int opcode, int length, char* payload)
-    ---------------------------------------------------------------------------
-    TODO   : > Make a message to send  
-    ---------------------------------------------------------------------------
-    INPUT  : - int opcode       [Opcode of message]
-    		 - int length       [Length of message]
-    		 - char *payload		[Pointer of payload]
-    OUTPUT : + return message         [return a message]
-*/
-char *makeMessage(int opcode, int length, char* payload)
-{
-    char* message = malloc(BUFF_SIZE+5);
-    bzero(message, BUFF_SIZE+5);
-    sprintf(message, "%d%04d", opcode, length);
-    memcpy(message+5, payload, length);
-    return message; 
-}
 
 
 /*  int sendFile(int opcode,char* filename, int client_sock)
@@ -100,7 +83,6 @@ int sendFile(int opcode, char* filename, int client_sock)
 	return 0;	
 }
 
-
 /*  int sendAll(int client_sock)
     ---------------------------------------------------------------------------
     TODO   : > Run some command to make file data and send them to server 
@@ -144,31 +126,6 @@ int sendAll(int client_sock)
     	remove(TMP_IMAGE);
     	return -4;
     }
-    return 0;
-}
-
-
-/*  int parseMess(char *mess, int *opcode, int *length, char *payload)
-    ---------------------------------------------------------------------------
-    TODO   : > parse a message and return opcode, length, payload 
-    ---------------------------------------------------------------------------
-    INPUT  : - char *mess		[message will be parse]
-    		 - int *opcode 		[Save opcode]
-    		 - int *length 		[Save length]
-    		 - char *payload	[Save payload]
-    OUTPUT : + return 0			[Parse success]
-*/
-int parseMess(char *mess, int *opcode, int *length, char *payload) {
-    char temp_str[5];
-    memcpy(temp_str, mess, 1);
-    temp_str[1] = '\0';
-    *opcode = atoi(temp_str);
-
-    memcpy(temp_str, mess+1, 4);
-    temp_str[4] = '\0';
-    *length = atoi(temp_str);
-
-    memcpy(payload, mess+5, *length);
     return 0;
 }
 
@@ -221,7 +178,6 @@ int receive(int client_sock) {
 	}
 	return 0;
 }
-
 
 /*  int sendError(int client_sock)
     ---------------------------------------------------------------------------
