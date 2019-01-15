@@ -1,8 +1,8 @@
 all: build setup
 
 build:
-		gcc server.c search.c message.c createfile.c -o server cjson/cJSON.o -g -pthread
-		gcc client.c message.c -o client -g
+		gcc server.c search.c message.c createfile.c -o server cjson/cJSON.o -lm -pthread -Wall
+		gcc client.c message.c -o client -lm -Wall
 setup: 
 		sudo chmod +x setup.sh
 		./setup.sh

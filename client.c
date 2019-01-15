@@ -38,7 +38,6 @@ int sendFile(int opcode, char* filename, int client_sock)
 	int lSize, bytes_sent, byte_read;
     char buff[BUFF_SIZE];
     char *mess;
-    int i;
 
 	FILE *fp = fopen(filename, "rb");
 	if (fp == NULL) {

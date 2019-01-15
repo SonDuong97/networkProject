@@ -197,7 +197,7 @@ int processData(ClientInfo* cli_info, char *mess)
     ---------------------------------------------------------------------------
 */
 void *showMenu(void *arg) {
-	int ret, choose, i;
+	int choose;
 	pthread_detach(pthread_self());
 	while(1) {
 		init();
@@ -225,13 +225,13 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int i, maxfd, listenfd, connfd, sockfd, choose, process_status;
+	int i, maxfd, listenfd, connfd, sockfd, process_status;
 
 	ssize_t	ret;
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
 	ClientInfo Client[FD_SETSIZE];
-	char * mess, rcvBuff[BUFF_SIZE + 5];
+	char rcvBuff[BUFF_SIZE + 5];
 	int port = atoi(argv[1]);
 	pthread_t tid; 
 	//Step 1: Construct a TCP socket to listen connection request
