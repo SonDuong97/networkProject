@@ -136,7 +136,7 @@ int searchByIp() {
 	printf("Enter a ipv4: \n");
 	scanf("%s", ip);
 	if (getDataFromFile(ip, res_client) == -1) {
-		printf("Ip khong ton tai.\n");
+		printf("IP not found.\n");
 		return -1;
 	}
 
@@ -477,6 +477,7 @@ int parseMess(char *mess, int *opcode, int *length, char *payload) {
     		 + return -2				[Can't set path of result file]
     		 + return -3				[Can't add datetime property to JSON object]
     		 + return -4				[Can't save JSON to file]
+    		 + return -5 				[Client error]
 */
 int processData(ClientInfo* cli_info, char *mess)
 {
@@ -562,6 +563,8 @@ int processData(ClientInfo* cli_info, char *mess)
 		        		}
 		        	}
 		        	break;
+		        case 5:
+		        	return -5;
 	        }
     		break;
     	case FINISH:
@@ -680,7 +683,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int i, maxfd, listenfd, connfd, sockfd, choose;
+	int i, maxfd, listenfd, connfd, sockfd, choose, process_status;
 
 	ssize_t	ret;
 	socklen_t clilen;
@@ -737,7 +740,6 @@ int main(int argc, char *argv[])
 			if((connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) < 0)
 				perror("\nError: ");
 			else{
-				printf("You got a connection from %s\n", inet_ntoa(cliaddr.sin_addr)); /* prints client's IP */
 				for (i = 0; i < FD_SETSIZE; i++)
 					if (client[i] < 0) {
 						client[i] = connfd;	/* save descriptor */
@@ -785,7 +787,14 @@ int main(int argc, char *argv[])
 					close(sockfd);
 					client[i] = -1;
 				} else {
-					if (processData(&Client[i], rcvBuff) == 0) {
+					process_status = processData(&Client[i], rcvBuff);
+					if (process_status == -5) {
+						FD_CLR(sockfd, &allset);
+						close(sockfd);
+						client[i] = -1;
+					} else 
+					if (process_status < 0) {
+						goto CLOSE;
 					}
 				}
 			}
@@ -793,6 +802,19 @@ int main(int argc, char *argv[])
 				break;		/* no more readable descriptors */
 		}
 	}
-	
+	CLOSE:
+	for (i = 0; i <= maxi; i++) {
+		if ( (sockfd = client[i]) < 0)
+			continue;
+		if (FD_ISSET(sockfd, &allset)) {
+			FD_CLR(sockfd, &allset);
+			close(sockfd);
+			client[i] = -1;
+		}
+		if (--nready <= 0)
+			break;		
+	}
+	system("clear");
+	printf("Server error. Closed!");
 	return 0;
 }

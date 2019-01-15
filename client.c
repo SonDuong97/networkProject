@@ -11,7 +11,6 @@
 #include "cjson/cJSON.h"
 
 #define BUFF_SIZE 1024
-#define TMP_FILENAME "tmp.txt"
 #define TMP_INFO "info.txt"
 #define TMP_IMAGE "image.png"
 #define TMP_OPERATION "event.txt"
@@ -120,25 +119,29 @@ int sendAll(int client_sock)
     system(command);
     if (sendFile(2, TMP_OPERATION, client_sock) != 0) {
     	fprintf(stderr, "Sending mouse and keyboard operations is wrong.\n");
+    	remove(TMP_OPERATION);
     	return -1;
     }
 	sprintf(command,"lscpu > %s", TMP_INFO);
     system(command);
     if (sendFile(0, TMP_INFO, client_sock) != 0) {
     	fprintf(stderr, "Sending infomation is wrong.\n");
+    	remove(TMP_INFO);
     	return -2;
     }
 
-    sprintf(command,"top -b -n1 | head -n 10 > %s", TMP_PROCESSING);
+    sprintf(command,"top -b -n1 | head -n 50 > %s", TMP_PROCESSING);
     system(command);
     if (sendFile(1, TMP_PROCESSING, client_sock) != 0) {
     	fprintf(stderr, "Sending processing is wrong.\n");
+    	remove(TMP_PROCESSING);
     	return -3;
     }
     sprintf(command,"import -window root %s", TMP_IMAGE);
     system(command);
     if (sendFile(3, TMP_IMAGE, client_sock) != 0) {
     	fprintf(stderr, "Sending image is wrong.\n");
+    	remove(TMP_IMAGE);
     	return -4;
     }
     return 0;
@@ -170,32 +173,76 @@ int parseMess(char *mess, int *opcode, int *length, char *payload) {
 }
 
 
-/*  int rcvTime(int client_sock)
+/*  int setTimeWait(char *payload,int length)
     ---------------------------------------------------------------------------
-    TODO   : > Receive time_wait from server
+    TODO   : > Set time_wait for this system
+    ---------------------------------------------------------------------------
+    INPUT  : - int client_sock		[client will be sent]
+    OUTPUT : + return -1			[Error]
+    		 + return 0				[Success]
+*/
+int setTimeWait(char *payload,int length)
+{
+	char timeWait[10];
+	int time;
+	memcpy(timeWait, payload, length);
+	timeWait[length] = 0;
+	time = atoi(timeWait);
+	if (time <= 0 || time >= 4294967296) return -1;
+	time_wait = time;
+    return 0;
+}
+
+/*  int receive(int client_sock)
+    ---------------------------------------------------------------------------
+    TODO   : > Receive message from server
+    ---------------------------------------------------------------------------
+    INPUT  : - int client_sock		[client will be sent]
+    OUTPUT : + return -1			[Error]
+    		 + return 0				[Success]
+*/
+int receive(int client_sock) {
+	int bytes_received;
+	int opcode, length;
+	char payload[BUFF_SIZE];
+	char buff[BUFF_SIZE+5];
+	bytes_received = recv(client_sock, buff, BUFF_SIZE + 5, MSG_DONTWAIT);
+	if (bytes_received <= 0) {
+		return 0;
+	}
+	parseMess(buff, &opcode, &length, payload);
+	switch(opcode) {
+		case 4: 										
+			setTimeWait(payload, length);		// Change time_wait
+			break;
+		case 5:
+			return -1;
+			break;
+	}
+	return 0;
+}
+
+
+/*  int sendError(int client_sock)
+    ---------------------------------------------------------------------------
+    TODO   : > Send error from client to server
     ---------------------------------------------------------------------------
     INPUT  : - int client_sock		[client will be sent]
     OUTPUT : + return -1			[Connection closed]
     		 + return 0				[Success]
 */
-int rcvTime(int client_sock)
-{
-	int bytes_received;
-	int opcode, length;
-	char payload[BUFF_SIZE];
-	char buff[BUFF_SIZE+5];
-	char timeWait[5];
-	bytes_received = recv(client_sock, buff, BUFF_SIZE + 5, MSG_DONTWAIT);
-	if (bytes_received <= 0) {
+int sendError(int client_sock) {
+	char *mess;
+	int bytes_sent;
+	mess = makeMessage(5, 0, "");
+	bytes_sent = send(client_sock, mess, BUFF_SIZE+5, 0);
+	free(mess);
+	if(bytes_sent <= 0){
+		printf("Error: Connection closed.\n");
 		return -1;
 	}
-	parseMess(buff, &opcode, &length, payload);
-	memcpy(timeWait, payload, length);
-	time_wait = atoi(timeWait);
-    return 0;
+	return 0;
 }
-
-
 
 int main(int argc, char *argv[]){
 	if (argc <= 2) {
@@ -205,11 +252,8 @@ int main(int argc, char *argv[]){
 	char server_address[100] = "";
 	strcpy(server_address, argv[1]);
 	int server_port = atoi(argv[2]);
-	int client_sock, i;
-	char buff[BUFF_SIZE], sendBuff[BUFF_SIZE];
+	int client_sock;
 	struct sockaddr_in server_addr; /* server's address information */
-	int msg_len, bytes_sent, bytes_received;
-	pthread_t tid;
 
 	//Step 1: Construct socket
 	client_sock = socket(AF_INET,SOCK_STREAM,0);
@@ -227,14 +271,19 @@ int main(int argc, char *argv[]){
 	// pthread_create(&tid, NULL, &mouse_and_keyboard, NULL);
 	//Step 4: Communicate with server
 	while (1) {	
-		if (rcvTime(client_sock) != 0) {
+		if (receive(client_sock) != 0) {
+			fprintf(stderr, "Receiving is wrong.\n");
+			sendError(client_sock);
+			break;
 		}
 
 		if (sendAll(client_sock) != 0) {
 			fprintf(stderr, "Sending is wrong.\n");
+			sendError(client_sock);
+			break;
 		}
 	}
-	
+
 	// Step 4: Close socket
 	close(client_sock);
 	return 0;
