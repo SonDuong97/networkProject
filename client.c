@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include "cjson/cJSON.h"
+#include "message.h"
 
 #define BUFF_SIZE 1024
 #define TMP_INFO "info.txt"
@@ -18,24 +19,6 @@
 #define MAX_LENGTH 256
 
 int time_wait = 10;
-
-/*  char *makeMessage(int opcode, int length, char* payload)
-    ---------------------------------------------------------------------------
-    TODO   : > Make a message to send  
-    ---------------------------------------------------------------------------
-    INPUT  : - int opcode       [Opcode of message]
-    		 - int length       [Length of message]
-    		 - char *payload		[Pointer of payload]
-    OUTPUT : + return message         [return a message]
-*/
-char *makeMessage(int opcode, int length, char* payload)
-{
-    char* message = malloc(BUFF_SIZE+5);
-    bzero(message, BUFF_SIZE+5);
-    sprintf(message, "%d%04d", opcode, length);
-    memcpy(message+5, payload, length);
-    return message; 
-}
 
 
 /*  int sendFile(int opcode,char* filename, int client_sock)
@@ -55,7 +38,6 @@ int sendFile(int opcode, char* filename, int client_sock)
 	int lSize, bytes_sent, byte_read;
     char buff[BUFF_SIZE];
     char *mess;
-    int i;
 
 	FILE *fp = fopen(filename, "rb");
 	if (fp == NULL) {
@@ -70,10 +52,10 @@ int sendFile(int opcode, char* filename, int client_sock)
 	while(lSize > 0) {
 		if (lSize > BUFF_SIZE) {
 			byte_read = fread (buff,1,BUFF_SIZE,fp);
-  			if (byte_read != BUFF_SIZE) {fputs ("Reading error",stderr); exit (3);}
+  			if (byte_read != BUFF_SIZE) {fputs ("Reading error",stderr); return -2;}
 		} else {
 			byte_read = fread (buff,1,lSize,fp);
-			if (byte_read != lSize) {fputs ("Reading error",stderr); exit (3);}
+			if (byte_read != lSize) {fputs ("Reading error",stderr); return -2;}
 		}
 		// Sent message with opcode = 0: Send all infomation of client's computer
 		mess = makeMessage(opcode, byte_read, buff);
@@ -81,7 +63,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 		free(mess);
 		if(bytes_sent <= 0){
 			printf("Error: Connection closed.\n");
-			return -1;
+			return -3;
 		}
 		lSize -= byte_read;
 		if (lSize <=0) {
@@ -91,7 +73,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 			free(mess);
 			if(bytes_sent <= 0){
 				printf("Error: Connection closed.\n");
-				return -1;
+				return -3;
 			}
 		}
 	}
@@ -99,7 +81,6 @@ int sendFile(int opcode, char* filename, int client_sock)
 	remove(filename);
 	return 0;	
 }
-
 
 /*  int sendAll(int client_sock)
     ---------------------------------------------------------------------------
@@ -144,31 +125,6 @@ int sendAll(int client_sock)
     	remove(TMP_IMAGE);
     	return -4;
     }
-    return 0;
-}
-
-
-/*  int parseMess(char *mess, int *opcode, int *length, char *payload)
-    ---------------------------------------------------------------------------
-    TODO   : > parse a message and return opcode, length, payload 
-    ---------------------------------------------------------------------------
-    INPUT  : - char *mess		[message will be parse]
-    		 - int *opcode 		[Save opcode]
-    		 - int *length 		[Save length]
-    		 - char *payload	[Save payload]
-    OUTPUT : + return 0			[Parse success]
-*/
-int parseMess(char *mess, int *opcode, int *length, char *payload) {
-    char temp_str[5];
-    memcpy(temp_str, mess, 1);
-    temp_str[1] = '\0';
-    *opcode = atoi(temp_str);
-
-    memcpy(temp_str, mess+1, 4);
-    temp_str[4] = '\0';
-    *length = atoi(temp_str);
-
-    memcpy(payload, mess+5, *length);
     return 0;
 }
 
@@ -221,7 +177,6 @@ int receive(int client_sock) {
 	}
 	return 0;
 }
-
 
 /*  int sendError(int client_sock)
     ---------------------------------------------------------------------------
