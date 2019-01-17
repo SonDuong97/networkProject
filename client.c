@@ -52,10 +52,10 @@ int sendFile(int opcode, char* filename, int client_sock)
 	while(lSize > 0) {
 		if (lSize > BUFF_SIZE) {
 			byte_read = fread (buff,1,BUFF_SIZE,fp);
-  			if (byte_read != BUFF_SIZE) {fputs ("Reading error",stderr); exit (3);}
+  			if (byte_read != BUFF_SIZE) {fputs ("Reading error",stderr); return -2;}
 		} else {
 			byte_read = fread (buff,1,lSize,fp);
-			if (byte_read != lSize) {fputs ("Reading error",stderr); exit (3);}
+			if (byte_read != lSize) {fputs ("Reading error",stderr); return -2;}
 		}
 		// Sent message with opcode = 0: Send all infomation of client's computer
 		mess = makeMessage(opcode, byte_read, buff);
@@ -63,7 +63,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 		free(mess);
 		if(bytes_sent <= 0){
 			printf("Error: Connection closed.\n");
-			return -1;
+			return -3;
 		}
 		lSize -= byte_read;
 		if (lSize <=0) {
@@ -73,7 +73,7 @@ int sendFile(int opcode, char* filename, int client_sock)
 			free(mess);
 			if(bytes_sent <= 0){
 				printf("Error: Connection closed.\n");
-				return -1;
+				return -3;
 			}
 		}
 	}
